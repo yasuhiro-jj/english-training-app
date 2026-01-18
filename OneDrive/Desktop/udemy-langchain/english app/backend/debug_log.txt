@@ -1,0 +1,40 @@
+Raw Content:
+{
+  "title": "Violence Video Goes Viral",
+  "date": "Posted January 10, 2026",
+  "category": "News",
+  "vocabulary": [
+    {
+      "word": "violence",
+      "pronunciation": "/ˈvaɪələns/",
+      "type": "(n.)",
+      "definition": "Behavior involving physical force intended to hurt or damage.",
+      "example": "The video showed an act of violence at the school."
+    },
+    {
+      "word": "privacy",
+      "pronunciation": "/ˈprɪvəsi/",
+      "type": "(n.)",
+      "definition": "The state of being free from public attention.",
+      "example": "The victim's privacy was violated by the video."
+    },
+    {
+      "word": "impact",
+      "pronunciation": "/ˈɪmpækt/",
+      "type": "(n.)",
+      "definition": "The strong effect or influence of something.",
+      "example": "The impact of social media on young people is significant."
+    }
+  ],
+  "content": "A video showing violence at a high school in Tochigi Prefecture was shared widely on social media. The video was filmed by students involved in the incident. Later, people who were not involved shared it online. Experts warn that this can lead to risks such as privacy invasion and negative effects on children's development. Attorney Yohei Shimizu noted that filming such incidents can make both the attackers and the bystanders responsible. For the victim, being filmed without consent raises issues of their rights.",
+  "discussion_a": [
+    "What happened in the video?",
+    "Who filmed the violence?"
+  ],
+  "discussion_b": [
+    "Have you ever seen a video like this? How did it make you feel?",
+    "Why do you think people share such videos online?"
+  ],
+  "question": "What happened in the video?",
+  "level": "B1"
+}
