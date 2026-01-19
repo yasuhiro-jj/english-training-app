@@ -1,4 +1,15 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
+// 末尾の記号を除去して正規化
+export const API_URL = (process.env.NEXT_PUBLIC_API_URL || '').replace(/\/$/, '');
+
+if (typeof window !== 'undefined') {
+    console.log('--- API_URL Debug Info ---');
+    console.log('NEXT_PUBLIC_API_URL env:', process.env.NEXT_PUBLIC_API_URL);
+    console.log('Final API_URL used:', API_URL);
+    if (!API_URL) {
+        console.warn('WARNING: NEXT_PUBLIC_API_URL is not set. All API calls will be relative to the frontend domain.');
+    }
+    console.log('--------------------------');
+}
 
 export interface SessionResponse {
     session_id: string;

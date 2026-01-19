@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { useAuth } from '../lib/auth-context';
 import { useRouter } from 'next/navigation';
+import { API_URL } from '../lib/api';
 
 export default function LoginPage() {
     const [email, setEmail] = useState('');
@@ -20,7 +21,6 @@ export default function LoginPage() {
         setLoading(true);
 
         try {
-            const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
             const res = await fetch(`${API_URL}/api/auth/login`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },

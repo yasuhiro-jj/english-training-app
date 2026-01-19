@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { API_URL } from '../../lib/api';
 
 interface User {
     email: string;
@@ -38,7 +39,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const logout = async () => {
         try {
-            const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
             await fetch(`${API_URL}/api/auth/logout`, {
                 method: 'POST',
                 credentials: 'include'
