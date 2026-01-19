@@ -1,56 +1,65 @@
 import httpx
 from bs4 import BeautifulSoup
 import asyncio
+import sys
 
 async def test_mainichi_scrape():
     url = "https://mainichi.jp/"
-    
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
     }
     
-    print(f"Testing URL: {url}")
-    
+    print(f"--- STEP 1: Fetching Top Page ({url}) ---")
     try:
         async with httpx.AsyncClient(verify=False, headers=headers) as client:
-            print("Fetching Top Page...")
             response = await client.get(url, timeout=10.0)
-            
             if response.status_code != 200:
-                print(f"Failed to fetch page: {response.status_code}")
+                print(f"FAILED to fetch top page: {response.status_code}")
                 return
 
             soup = BeautifulSoup(response.text, 'html.parser')
             
-            # Find top news link (structure might vary, looking for primary headline)
-            # Mainichi usually has class="headline" or checks within <main>
-            
-            # Common patterns for top news
+            print("--- STEP 2: Finding Article Link ---")
+            # Selectors from NewsService
             articles = soup.select('section.box-secondary article a') or soup.find_all('a', class_='index-link')
             
-            if not articles:
-                # Fallback search
-                print("Standard selectors failed, dumping all links...")
+            target_url = ""
+            if articles:
+                 print(f"Found {len(articles)} articles with standard selectors.")
+                 target_url = articles[0].get('href')
+            else:
+                print("Standard selectors failed, trying fallback...")
                 links = soup.find_all('a')
                 valid_links = [l.get('href') for l in links if l.get('href') and '/articles/' in l.get('href')]
-                print(f"Found {len(valid_links)} potential article links: {valid_links[:3]}")
-                target_url = "https:" + valid_links[0] if valid_links and valid_links[0].startswith('//') else valid_links[0]
-                if not target_url.startswith('http'):
-                     target_url = "https://mainichi.jp" + target_url
-            else:
-                 target_url = "https://mainichi.jp" + articles[0].get('href')
+                if valid_links:
+                    print(f"Found {len(valid_links)} fallback links.")
+                    target_url = valid_links[0]
+                else:
+                    print("CRITICAL: No article links found at all.")
+                    return
 
-            print(f"Fetching Article: {target_url}")
+            # Clean URL
+            if target_url.startswith('//'):
+                target_url = "https:" + target_url
+            elif not target_url.startswith('http'):
+                target_url = "https://mainichi.jp/" + target_url.lstrip('/')
             
-            # Fetch the article content
+            print(f"Target URL: {target_url}")
+
+            print("--- STEP 3: Fetching Article Page ---")
             article_res = await client.get(target_url, timeout=10.0)
+            if article_res.status_code != 200:
+                print(f"FAILED to fetch article page: {article_res.status_code}")
+                return
+
             article_soup = BeautifulSoup(article_res.text, 'html.parser')
             
             # Get Title
-            title = article_soup.find('h1').get_text(strip=True)
+            title_tag = article_soup.find('h1')
+            title = title_tag.get_text(strip=True) if title_tag else "NO TITLE FOUND"
             print(f"Title: {title}")
             
-            # Get Content - Try multiple robust selectors
+            print("--- STEP 4: Extracting Content ---")
             body = (
                 article_soup.find('section', class_='main-text') or 
                 article_soup.find('div', class_='main-text') or 
@@ -59,22 +68,22 @@ async def test_mainichi_scrape():
             )
             
             if body:
-                text = body.get_text(strip=True)[:500]
-                print(f"Content (Found with selector): {text}...")
+                content = body.get_text(strip=True)
+                print(f"SUCCESS: Content found with primary selector. Length: {len(content)}")
+                print(f"Snippet: {content[:100]}...")
             else:
-                print("Specific selector failed. Trying loose paragraphs...")
-                # Fallback: Find p tags that look like article text (longer than 20 chars)
+                print("Primary content selectors failed, trying fallback paragraphs...")
                 paragraphs = article_soup.find_all('p')
                 long_ps = [p.get_text(strip=True) for p in paragraphs if len(p.get_text(strip=True)) > 20]
                 if long_ps:
-                    text = '\n'.join(long_ps[:5]) # First 5 paragraphs
-                    print(f"Content (Fallback P tags): {text[:500]}...")
+                    content = '\n'.join(long_ps[:10])
+                    print(f"SUCCESS: Content found with fallback P tags. Length: {len(content)}")
+                    print(f"Snippet: {content[:100]}...")
                 else:
-                    print("Could not find article body even with fallback.")
-
+                    print("CRITICAL: No content found.")
 
     except Exception as e:
-        print(f"Error occurred: {e}")
+        print(f"EXCEPTION: {e}")
 
 if __name__ == "__main__":
     asyncio.run(test_mainichi_scrape())
