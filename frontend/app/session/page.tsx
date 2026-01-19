@@ -45,16 +45,20 @@ export default function SessionPage() {
     };
 
     const handleGenerate = async () => {
+        console.log('[Session] handleGenerate started');
         setIsGenerating(true);
         setError('');
         try {
             const response = await api.generateLessons();
+            console.log('[Session] handleGenerate success:', response);
             setLessons(response.lessons);
             setStep('selection');
         } catch (err: any) {
+            console.error('[Session] handleGenerate error:', err);
             setError(err.message || 'レッスンの生成に失敗しました');
         } finally {
             setIsGenerating(false);
+            console.log('[Session] handleGenerate finished');
         }
     };
 
