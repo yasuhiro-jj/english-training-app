@@ -2,25 +2,20 @@
 
 import { useState, useEffect } from 'react';
 import { api } from '@/lib/api';
-import { useAuth } from '@/app/lib/auth-context';
+import { useRequireAuth } from '../lib/hooks/useRequireAuth';
 import { useRouter } from 'next/navigation';
-import AIChat from '@/components/AIChat';
+import AIChat from '../../components/AIChat';
 
 export default function DashboardPage() {
-    const { user, loading: authLoading } = useAuth();
+    const { user, loading: authLoading } = useRequireAuth();
     const router = useRouter();
     const [stats, setStats] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
 
     useEffect(() => {
-        console.log('[Dashboard] Auth Check - loading:', authLoading, 'user:', !!user);
-        if (!authLoading && !user) {
-            // Global redirect handled by AuthProvider.
-            return;
-        }
-
         if (user) {
+            console.log('[Dashboard] Fetching stats for user:', user.email);
             const fetchStats = async () => {
                 try {
                     const data = await api.getDashboardStats();
@@ -33,7 +28,7 @@ export default function DashboardPage() {
             };
             fetchStats();
         }
-    }, [user, authLoading, router]);
+    }, [user]);
 
     if (authLoading || loading) {
         return (
