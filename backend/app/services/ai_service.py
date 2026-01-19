@@ -231,33 +231,35 @@ class AIService:
         try:
             data = json.loads(content)
             print(f"[Backend] JSON parsed successfully. Keys: {data.keys()}")
-                lessons = []
-                
-                if isinstance(data, dict):
-                    if "lessons" in data and isinstance(data["lessons"], list):
-                        lessons = data["lessons"]
-                    elif "title" in data:
-                        lessons = [data]
-                
-                if not lessons:
-                    return []
-
-                # メタデータ付与
-                final_lessons = []
-                for lesson in lessons:
-                    lesson["japanese_title"] = japanese_title
-                    if "question" not in lesson and "discussion_a" in lesson and lesson["discussion_a"]:
-                        lesson["question"] = lesson["discussion_a"][0]
-                    final_lessons.append(lesson)
-                
-                return final_lessons
-                
-            except json.JSONDecodeError as je:
-                print(f"JSON Decode Error: {je}")
+            lessons = []
+            
+            if isinstance(data, dict):
+                if "lessons" in data and isinstance(data["lessons"], list):
+                    lessons = data["lessons"]
+                elif "title" in data:
+                    lessons = [data]
+            
+            if not lessons:
+                print("[Backend] No lessons found in parsed data")
                 return []
 
+            # メタデータ付与
+            final_lessons = []
+            for lesson in lessons:
+                lesson["japanese_title"] = japanese_title
+                if "question" not in lesson and "discussion_a" in lesson and lesson["discussion_a"]:
+                    lesson["question"] = lesson["discussion_a"][0]
+                final_lessons.append(lesson)
+            
+            return final_lessons
+            
+        except json.JSONDecodeError as je:
+            print(f"[Backend] JSON Decode Error: {je}")
+            return []
         except Exception as e:
-            print(f"Error in generate_english_lesson: {e}")
+            print(f"[Backend] Unexpected error after AI completion: {e}")
+            import traceback
+            traceback.print_exc()
             return []
 
     async def chat_response(self, message: str, history: List[Dict]) -> str:
