@@ -48,6 +48,34 @@ export default function DashboardPage() {
                     <p className="mt-2 text-slate-400 uppercase tracking-widest text-xs font-bold">Your Learning Dashboard</p>
                 </header>
 
+                {/* Action Card */}
+                <div className="mb-12">
+                    <div
+                        onClick={() => router.push('/session')}
+                        className="relative overflow-hidden bg-gradient-to-br from-indigo-600 to-purple-700 rounded-3xl p-8 shadow-2xl shadow-indigo-500/20 cursor-pointer group hover:scale-[1.02] transition-all duration-300"
+                    >
+                        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+                            <div>
+                                <h2 className="text-3xl font-black text-white mb-2 italic">今日のレッスンを生成する</h2>
+                                <p className="text-indigo-100 text-sm font-medium opacity-80 uppercase tracking-widest">Generate your personalized daily English lesson from news</p>
+                            </div>
+                            <div className="flex items-center space-x-4">
+                                <div className="bg-white/20 backdrop-blur-md px-6 py-3 rounded-2xl border border-white/30 group-hover:bg-white/30 transition-colors">
+                                    <span className="text-white font-bold text-lg flex items-center">
+                                        START TRAINING
+                                        <svg className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="9 5l7 7-7 7" />
+                                        </svg>
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        {/* Background Decoration */}
+                        <div className="absolute -right-12 -bottom-12 w-64 h-64 bg-white/10 rounded-full blur-3xl group-hover:bg-white/20 transition-all"></div>
+                        <div className="absolute left-1/2 top-0 w-32 h-32 bg-indigo-400/20 rounded-full blur-2xl"></div>
+                    </div>
+                </div>
+
                 {error && (
                     <div className="mb-8 p-4 bg-red-500/20 border border-red-500/50 rounded-xl text-red-200 backdrop-blur-md">
                         {error}
