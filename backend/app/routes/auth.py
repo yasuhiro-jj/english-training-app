@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException, Response, Depends
 from pydantic import BaseModel, EmailStr
 from app.services.auth_service import AuthService
+import os
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 auth_service = AuthService()
