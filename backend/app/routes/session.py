@@ -42,16 +42,18 @@ async def generate_lessons():
         )
         
         if not lessons:
-            print("[Backend] AI generation returned empty lessons")
-            raise HTTPException(status_code=500, detail="レッスンの生成に失敗しました")
+            print("[Backend] FAILED: ai_service.generate_english_lesson returned empty list")
+            raise HTTPException(status_code=500, detail="レッスンの生成に失敗しました (AI出力空空)")
             
-        print(f"[Backend] Lessons generated successfully: {len(lessons)} items")
+        print(f"[Backend] SUCCESS: Lessons generated: {len(lessons)} items")
         return {"lessons": lessons}
         
     except HTTPException:
         raise
     except Exception as e:
-        print(f"Generate Error: {e}")
+        print(f"[Backend] CRITICAL ERROR in generate_lessons: {type(e).__name__}: {e}")
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"生成エラー: {str(e)}")
 
 

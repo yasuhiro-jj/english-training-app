@@ -212,22 +212,25 @@ class AIService:
 }}
 ```
 """
+        print(f"[Backend] AI Prompt constructed (first 200 chars): {prompt[:200]}...")
+        
+        response = await self.client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": "You are a professional English education content creator. Output valid JSON with 'lessons' key containing a single high-quality lesson."},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.7,
+            max_tokens=3000,
+            response_format={ "type": "json_object" }
+        )
+        
+        content = response.choices[0].message.content.strip()
+        print(f"[Backend] AI Raw Response (first 200 chars): {content[:200]}...")
+        
         try:
-            response = await self.client.chat.completions.create(
-                model="gpt-4o-mini",
-                messages=[
-                    {"role": "system", "content": "You are a professional English education content creator. Output valid JSON with 'lessons' key containing a single high-quality lesson."},
-                    {"role": "user", "content": prompt}
-                ],
-                temperature=0.7,
-                max_tokens=3000,
-                response_format={ "type": "json_object" }
-            )
-            
-            content = response.choices[0].message.content.strip()
-            
-            try:
-                data = json.loads(content)
+            data = json.loads(content)
+            print(f"[Backend] JSON parsed successfully. Keys: {data.keys()}")
                 lessons = []
                 
                 if isinstance(data, dict):
