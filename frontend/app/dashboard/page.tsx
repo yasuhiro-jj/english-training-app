@@ -16,8 +16,7 @@ export default function DashboardPage() {
     useEffect(() => {
         console.log('[Dashboard] Auth Check - loading:', authLoading, 'user:', !!user);
         if (!authLoading && !user) {
-            console.log('[Dashboard] Redirecting to /login because user is null and loading is false');
-            router.push('/login');
+            // Global redirect handled by AuthProvider.
             return;
         }
 

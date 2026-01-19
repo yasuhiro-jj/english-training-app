@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../lib/auth-context';
 import { useRouter } from 'next/navigation';
 import { API_URL } from '../../lib/api';
@@ -10,10 +10,13 @@ export default function LoginPage() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
 
-    const { login } = useAuth();
-    const router = useRouter();
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
+    const { login, user } = useAuth();
+    const router = useRouter();
+
+    // Global redirect handled by AuthProvider.
+
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -35,7 +38,9 @@ export default function LoginPage() {
             }
 
             login(email, data.access_token);
-            router.push('/');
+            console.log('[Login] Success, redirecting to dashboard');
+            router.replace('/dashboard');
+
         } catch (err: any) {
             setError(err.message);
         } finally {

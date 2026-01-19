@@ -1,19 +1,12 @@
 'use client';
 
-import { useAuth } from '@/app/lib/auth-context';
-import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
-import AIChat from '@/components/AIChat';
+import { useAuth } from '../lib/auth-context';
+import { useRequireAuth } from '../lib/hooks/useRequireAuth';
+import AIChat from '../../components/AIChat';
 
 export default function ChatPage() {
-    const { user, loading } = useAuth();
-    const router = useRouter();
+    const { user, loading } = useRequireAuth();
 
-    useEffect(() => {
-        if (!loading && !user) {
-            router.push('/login');
-        }
-    }, [user, loading, router]);
 
     if (loading || !user) {
         return (

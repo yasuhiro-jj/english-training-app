@@ -1,9 +1,11 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { api, FeedbackItem } from '@/lib/api';
+import { api, FeedbackItem } from '../../lib/api';
+import { useRequireAuth } from '../lib/hooks/useRequireAuth';
 
 export default function FeedbackPage() {
+    const { user, loading: authLoading } = useRequireAuth();
     const [feedback, setFeedback] = useState<FeedbackItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');

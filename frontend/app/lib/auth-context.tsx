@@ -1,7 +1,7 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
+import { useRouter, usePathname } from 'next/navigation';
 import { API_URL } from '../../lib/api';
 
 interface User {
@@ -20,28 +20,31 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
+    const [mounted, setMounted] = useState(false);
     const router = useRouter();
+    const pathname = usePathname();
+    const hasRedirected = useRef(false);
 
     useEffect(() => {
-        console.log('[Auth] AuthProvider mounting, checking localStorage...');
-        // ローカルストレージから初期ユーザー情報を確認（あれば）
-        const storedUser = localStorage.getItem('user');
-        const storedToken = localStorage.getItem('auth_token');
-        console.log('[Auth] storedUser:', storedUser);
-        console.log('[Auth] storedToken exists:', !!storedToken);
+        setMounted(true);
+        console.log('[Auth] AuthProvider mounting, restoring session...');
 
-        if (storedUser) {
-            try {
+        try {
+            const storedUser = localStorage.getItem('user');
+            const storedToken = localStorage.getItem('auth_token');
+
+            if (storedUser && storedToken) {
                 setUser(JSON.parse(storedUser));
                 console.log('[Auth] User session restored');
-            } catch (e) {
-                console.error('[Auth] Error parsing stored user:', e);
             }
-        } else {
-            console.log('[Auth] No stored user found');
+        } catch (e) {
+            console.error('[Auth] Session restoration failed:', e);
+        } finally {
+            setLoading(false);
         }
-        setLoading(false);
     }, []);
+
+    // Removal of redundant state update log as it's merged into Route Check log above.
 
     const login = (email: string, token: string) => {
         const userData = { email };
@@ -59,7 +62,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setUser(null);
             localStorage.removeItem('user');
             localStorage.removeItem('auth_token');
-            router.push('/login');
+            router.replace('/login');
         } catch (error) {
             console.error('Logout error:', error);
         }

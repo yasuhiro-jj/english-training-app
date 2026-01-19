@@ -1,10 +1,12 @@
 'use client';
 
-import { useState } from 'react';
-import { api, LessonOption } from '@/lib/api';
-import AudioRecorder from '@/components/AudioRecorder';
+import { useState, useEffect } from 'react';
+import { api, LessonOption } from '../../lib/api';
+import AudioRecorder from '../../components/AudioRecorder';
+import { useRequireAuth } from '../lib/hooks/useRequireAuth';
 
 export default function SessionPage() {
+    const { user, loading: authLoading } = useRequireAuth();
     // added 'learning' step for reading the article before recording
     const [step, setStep] = useState<'input' | 'selection' | 'learning' | 'recording' | 'analyzing' | 'complete'>('input');
     const [articleUrl, setArticleUrl] = useState('');
@@ -16,6 +18,10 @@ export default function SessionPage() {
     const [analysisResult, setAnalysisResult] = useState<any | null>(null);
     const [lessons, setLessons] = useState<LessonOption[]>([]);
     const [isGenerating, setIsGenerating] = useState(false);
+
+    useEffect(() => {
+        console.log('[Session] Page Mounted');
+    }, []);
 
     // Old method for URL input (kept for compatibility or removal)
     const handleStartSessionUrl = async () => {
