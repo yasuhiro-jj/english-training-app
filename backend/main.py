@@ -17,9 +17,11 @@ app = FastAPI(
 
 # CORS設定（フロントエンドからのアクセスを許可）
 allowed_origins = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000").split(",")
+# credentialsがTrueの場合、originsに "*" は指定できないため、明示的に指定するか、
+# 全て許可したい場合は "*" を展開する必要があるが、通常はフロントURLを指定する。
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=allowed_origins if allowed_origins != ["*"] else ["*"],
+    allow_origins=[o for o in allowed_origins if o != "*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
