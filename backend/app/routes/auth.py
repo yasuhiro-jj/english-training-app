@@ -31,13 +31,14 @@ async def login(user_data: UserAuth, response: Response):
     token = auth_service.create_access_token({"sub": user["email"]})
     
     # httpOnly Cookieに保存
+    is_prod = os.getenv("ENVIRONMENT") == "production"
     response.set_cookie(
         key="access_token",
         value=token,
         httponly=True,
         max_age=7 * 24 * 60 * 60, # 7日間
-        samesite="lax",
-        secure=False  # 開発環境のため
+        samesite="none" if is_prod else "lax",
+        secure=True if is_prod else False
     )
     
     return {"message": "ログインに成功しました", "email": user["email"]}
