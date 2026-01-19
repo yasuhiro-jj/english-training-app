@@ -2,7 +2,7 @@
 export const API_URL = (process.env.NEXT_PUBLIC_API_URL || '').replace(/\/$/, '');
 
 if (typeof window !== 'undefined') {
-    console.log('--- [BUILD ATTEMPT: #6] API_URL Debug Info ---');
+    console.log('--- [BUILD ATTEMPT: #7] API_URL Debug Info ---');
     console.log('Raw process.env.NEXT_PUBLIC_API_URL:', process.env.NEXT_PUBLIC_API_URL);
     console.log('Final API_URL used:', API_URL);
     if (!API_URL) {
