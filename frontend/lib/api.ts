@@ -62,11 +62,29 @@ export interface LessonGenerateResponse {
     lessons: LessonOption[];
 }
 
+const getAuthHeaders = (): HeadersInit => {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+    return {
+        'Content-Type': 'application/json',
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+    };
+};
+
+const authenticatedFetch = async (url: string, options: RequestInit = {}) => {
+    return fetch(url, {
+        ...options,
+        headers: {
+            ...getAuthHeaders(),
+            ...options.headers,
+        },
+        credentials: 'include',
+    });
+};
+
 export const api = {
     async generateLessons(): Promise<LessonGenerateResponse> {
-        const response = await fetch(`${API_URL}/api/session/generate`, {
+        const response = await authenticatedFetch(`${API_URL}/api/session/generate`, {
             method: 'GET',
-            credentials: 'include',
         });
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
@@ -85,17 +103,14 @@ export const api = {
             body.custom_title = customContent.title;
             body.custom_content = customContent.content;
             body.custom_question = customContent.question;
-            // article_url is optional now
         } else if (articleUrl) {
             body.article_url = articleUrl;
         } else {
             throw new Error("URLまたはコンテンツが必要です");
         }
 
-        const response = await fetch(`${API_URL}/api/session/start`, {
+        const response = await authenticatedFetch(`${API_URL}/api/session/start`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
             body: JSON.stringify(body),
         });
 
@@ -112,10 +127,8 @@ export const api = {
         transcript: string,
         durationSeconds: number
     ): Promise<AnalysisResponse> {
-        const response = await fetch(`${API_URL}/api/session/submit`, {
+        const response = await authenticatedFetch(`${API_URL}/api/session/submit`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
             body: JSON.stringify({
                 session_id: sessionId,
                 transcript,
@@ -131,9 +144,7 @@ export const api = {
     },
 
     async getRecentFeedback(limit: number = 10): Promise<FeedbackItem[]> {
-        const response = await fetch(`${API_URL}/api/feedback/recent?limit=${limit}`, {
-            credentials: 'include',
-        });
+        const response = await authenticatedFetch(`${API_URL}/api/feedback/recent?limit=${limit}`);
 
         if (!response.ok) {
             throw new Error('フィードバックの取得に失敗しました');
@@ -144,9 +155,7 @@ export const api = {
     },
 
     async getDashboardStats(): Promise<any> {
-        const response = await fetch(`${API_URL}/api/dashboard/stats`, {
-            credentials: 'include',
-        });
+        const response = await authenticatedFetch(`${API_URL}/api/dashboard/stats`);
         if (!response.ok) {
             throw new Error('統計情報の取得に失敗しました');
         }
@@ -154,10 +163,8 @@ export const api = {
     },
 
     async sendMessage(message: string, history: any[]): Promise<{ response: string }> {
-        const response = await fetch(`${API_URL}/api/chat`, {
+        const response = await authenticatedFetch(`${API_URL}/api/chat`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
             body: JSON.stringify({ message, history }),
         });
         if (!response.ok) {

@@ -34,7 +34,7 @@ export default function LoginPage() {
                 throw new Error(data.detail || 'ログインに失敗しました');
             }
 
-            login(email);
+            login(email, data.access_token);
             router.push('/');
         } catch (err: any) {
             setError(err.message);

@@ -11,7 +11,7 @@ interface User {
 interface AuthContextType {
     user: User | null;
     loading: boolean;
-    login: (email: string) => void;
+    login: (email: string, token: string) => void;
     logout: () => Promise<void>;
 }
 
@@ -31,10 +31,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setLoading(false);
     }, []);
 
-    const login = (email: string) => {
+    const login = (email: string, token: string) => {
         const userData = { email };
         setUser(userData);
         localStorage.setItem('user', JSON.stringify(userData));
+        localStorage.setItem('auth_token', token);
     };
 
     const logout = async () => {
@@ -45,6 +46,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             });
             setUser(null);
             localStorage.removeItem('user');
+            localStorage.removeItem('auth_token');
             router.push('/login');
         } catch (error) {
             console.error('Logout error:', error);
