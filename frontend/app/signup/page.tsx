@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { API_URL } from '../lib/api';
+import { API_URL } from '../../lib/api';
 
 export default function SignupPage() {
     const [email, setEmail] = useState('');
