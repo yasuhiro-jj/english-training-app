@@ -23,10 +23,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const router = useRouter();
 
     useEffect(() => {
+        console.log('[Auth] AuthProvider mounting, checking localStorage...');
         // ローカルストレージから初期ユーザー情報を確認（あれば）
         const storedUser = localStorage.getItem('user');
+        const storedToken = localStorage.getItem('auth_token');
+        console.log('[Auth] storedUser:', storedUser);
+        console.log('[Auth] storedToken exists:', !!storedToken);
+
         if (storedUser) {
-            setUser(JSON.parse(storedUser));
+            try {
+                setUser(JSON.parse(storedUser));
+                console.log('[Auth] User session restored');
+            } catch (e) {
+                console.error('[Auth] Error parsing stored user:', e);
+            }
+        } else {
+            console.log('[Auth] No stored user found');
         }
         setLoading(false);
     }, []);

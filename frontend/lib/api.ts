@@ -2,7 +2,7 @@
 export const API_URL = (process.env.NEXT_PUBLIC_API_URL || '').replace(/\/$/, '');
 
 if (typeof window !== 'undefined') {
-    console.log('--- [BUILD ATTEMPT: #5] API_URL Debug Info ---');
+    console.log('--- [BUILD ATTEMPT: #6] API_URL Debug Info ---');
     console.log('Raw process.env.NEXT_PUBLIC_API_URL:', process.env.NEXT_PUBLIC_API_URL);
     console.log('Final API_URL used:', API_URL);
     if (!API_URL) {
@@ -64,6 +64,7 @@ export interface LessonGenerateResponse {
 
 const getAuthHeaders = (): HeadersInit => {
     const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+    console.log('[API] getAuthHeaders - Token present:', !!token);
     return {
         'Content-Type': 'application/json',
         ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
