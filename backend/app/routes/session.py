@@ -22,22 +22,30 @@ async def generate_lessons():
     """
     毎日新聞のトップ記事から英語レッスンを生成
     """
+    print("[Backend] generate_lessons called")
     try:
         # 1. ニュース取得
+        print("[Backend] Fetching news...")
         news_data = await news_service.fetch_top_news()
         
         if not news_data:
+            print("[Backend] News fetch failed")
             raise HTTPException(status_code=404, detail="ニュース記事の取得に失敗しました")
+        
+        print(f"[Backend] News fetched: {news_data['title']}")
             
         # 2. レッスン生成
+        print("[Backend] Generating lessons with AI...")
         lessons = await ai_service.generate_english_lesson(
             japanese_content=news_data["content"],
             japanese_title=news_data["title"]
         )
         
         if not lessons:
+            print("[Backend] AI generation returned empty lessons")
             raise HTTPException(status_code=500, detail="レッスンの生成に失敗しました")
             
+        print(f"[Backend] Lessons generated successfully: {len(lessons)} items")
         return {"lessons": lessons}
         
     except HTTPException:
