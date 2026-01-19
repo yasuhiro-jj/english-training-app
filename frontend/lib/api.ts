@@ -1,4 +1,4 @@
-const API_URL = ''; // Use relative URLs for proxy
+const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
 
 export interface SessionResponse {
     session_id: string;
