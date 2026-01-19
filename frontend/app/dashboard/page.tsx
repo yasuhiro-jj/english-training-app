@@ -14,7 +14,9 @@ export default function DashboardPage() {
     const [error, setError] = useState('');
 
     useEffect(() => {
+        console.log('[Dashboard] Auth Check - loading:', authLoading, 'user:', !!user);
         if (!authLoading && !user) {
+            console.log('[Dashboard] Redirecting to /login because user is null and loading is false');
             router.push('/login');
             return;
         }
