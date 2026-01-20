@@ -74,6 +74,10 @@ class LessonOption(BaseModel):
     level: str
     japanese_title: str = ""  # Optional, added by backend after generation
 
+class LessonGenerateRequest(BaseModel):
+    """レッスン生成リクエスト（URL指定版）"""
+    news_url: str
+
 class LessonGenerateResponse(BaseModel):
     lessons: list[LessonOption]
 

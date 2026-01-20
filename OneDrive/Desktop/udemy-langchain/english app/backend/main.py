@@ -6,7 +6,7 @@ import os
 # Load environment variables FIRST
 load_dotenv()
 
-from app.routes import session_router, auth_router, chat_router, dashboard_router
+from app.routes import session_router, auth_router, chat_router, dashboard_router, lesson_router
 
 
 app = FastAPI(
@@ -16,9 +16,11 @@ app = FastAPI(
 )
 
 # CORS設定（フロントエンドからのアクセスを許可）
+allowed_origins = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000").split(",")
+# 本番環境のVercel URLも追加（環境変数で設定可能）
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],  # Next.jsのデフォルトポート
+    allow_origins=[origin.strip() for origin in allowed_origins if origin.strip()],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -29,6 +31,7 @@ app.include_router(session_router)
 app.include_router(auth_router)
 app.include_router(chat_router)
 app.include_router(dashboard_router)
+app.include_router(lesson_router)
 
 @app.get("/")
 async def root():
