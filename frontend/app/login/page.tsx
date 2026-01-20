@@ -39,7 +39,8 @@ export default function LoginPage() {
 
             login(email, data.access_token);
             console.log('[Login] Success, redirecting to dashboard');
-            router.replace('/dashboard');
+            // 認証Contextの反映タイミング問題を避けるためフルリロードで遷移
+            window.location.href = '/dashboard';
 
         } catch (err: any) {
             setError(err.message);
