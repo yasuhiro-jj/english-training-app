@@ -4,6 +4,21 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../auth-context';
 
+function decodeJwtSub(token: string): string | null {
+    try {
+        const parts = token.split('.');
+        if (parts.length < 2) return null;
+        const payloadB64 = parts[1];
+        const payload = payloadB64.replace(/-/g, '+').replace(/_/g, '/');
+        const padded = payload + '='.repeat((4 - (payload.length % 4)) % 4);
+        const json = atob(padded);
+        const data = JSON.parse(json) as { sub?: string };
+        return data.sub ?? null;
+    } catch {
+        return null;
+    }
+}
+
 export function useRequireAuth() {
     const { user, loading, login } = useAuth();
     const router = useRouter();
@@ -17,15 +32,12 @@ export function useRequireAuth() {
         try {
             const storedToken = localStorage.getItem('auth_token');
             if (storedToken) {
-                // userが無くてもtokenがあれば復元できる（AuthProvider側でsubから復元する）
-                const storedUser = localStorage.getItem('user');
-                if (storedUser) {
-                    const parsed = JSON.parse(storedUser) as { email?: string };
-                    if (parsed?.email) {
-                        console.log('[AuthGuard] Restoring session from localStorage, skipping redirect');
-                        login(parsed.email, storedToken);
-                        return;
-                    }
+                // userが無くてもtokenがあれば sub(email) から復元してリダイレクトを防ぐ
+                const emailFromToken = decodeJwtSub(storedToken);
+                if (emailFromToken) {
+                    console.log('[AuthGuard] Restoring session from token sub, skipping redirect');
+                    login(emailFromToken, storedToken);
+                    return;
                 }
             }
         } catch (e) {
