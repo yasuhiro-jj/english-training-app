@@ -15,14 +15,17 @@ export function useRequireAuth() {
         // ログイン直後の画面遷移では、Contextの user が未反映の瞬間がある。
         // localStorage にセッションがあれば復元してから判定する。
         try {
-            const storedUser = localStorage.getItem('user');
             const storedToken = localStorage.getItem('auth_token');
-            if (storedUser && storedToken) {
-                const parsed = JSON.parse(storedUser) as { email?: string };
-                if (parsed?.email) {
-                    console.log('[AuthGuard] Restoring session from localStorage, skipping redirect');
-                    login(parsed.email, storedToken);
-                    return;
+            if (storedToken) {
+                // userが無くてもtokenがあれば復元できる（AuthProvider側でsubから復元する）
+                const storedUser = localStorage.getItem('user');
+                if (storedUser) {
+                    const parsed = JSON.parse(storedUser) as { email?: string };
+                    if (parsed?.email) {
+                        console.log('[AuthGuard] Restoring session from localStorage, skipping redirect');
+                        login(parsed.email, storedToken);
+                        return;
+                    }
                 }
             }
         } catch (e) {

@@ -17,6 +17,22 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+function decodeJwtSub(token: string): string | null {
+    try {
+        const parts = token.split('.');
+        if (parts.length < 2) return null;
+        const payloadB64 = parts[1];
+        // base64url -> base64
+        const payload = payloadB64.replace(/-/g, '+').replace(/_/g, '/');
+        const padded = payload + '='.repeat((4 - (payload.length % 4)) % 4);
+        const json = atob(padded);
+        const data = JSON.parse(json) as { sub?: string };
+        return data.sub ?? null;
+    } catch {
+        return null;
+    }
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
@@ -33,9 +49,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             const storedUser = localStorage.getItem('user');
             const storedToken = localStorage.getItem('auth_token');
 
+            // tokenがあれば最優先で復元（userが壊れていても復元できるようにする）
+            if (storedToken) {
+                const emailFromToken = decodeJwtSub(storedToken);
+                if (emailFromToken) {
+                    const userData = { email: emailFromToken };
+                    setUser(userData);
+                    // userが無い/壊れている場合に備えて再保存
+                    localStorage.setItem('user', JSON.stringify(userData));
+                    console.log('[Auth] User session restored from token');
+                    return;
+                }
+            }
+
+            // フォールバック：user + token が揃っている場合
             if (storedUser && storedToken) {
                 setUser(JSON.parse(storedUser));
-                console.log('[Auth] User session restored');
+                console.log('[Auth] User session restored from storage');
             }
         } catch (e) {
             console.error('[Auth] Session restoration failed:', e);
