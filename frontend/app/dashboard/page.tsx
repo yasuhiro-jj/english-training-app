@@ -20,7 +20,14 @@ export default function DashboardPage() {
                 try {
                     const data = await api.getDashboardStats();
                     setStats(data);
-                } catch (err) {
+                } catch (err: any) {
+                    console.error('[Dashboard] Error fetching stats:', err);
+                    // 401エラーの場合はログインページにリダイレクト
+                    if (err.message?.includes('401') || err.message?.includes('認証')) {
+                        console.log('[Dashboard] Authentication failed, redirecting to login');
+                        router.replace('/login');
+                        return;
+                    }
                     setError('データの取得に失敗しました');
                 } finally {
                     setLoading(false);
@@ -28,7 +35,7 @@ export default function DashboardPage() {
             };
             fetchStats();
         }
-    }, [user]);
+    }, [user, router]);
 
     if (authLoading || loading) {
         return (
