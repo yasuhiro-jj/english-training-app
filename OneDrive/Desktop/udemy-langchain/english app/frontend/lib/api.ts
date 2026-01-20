@@ -4,7 +4,9 @@
 const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
 
 // 401エラー時の処理（認証エラー）
-const handleAuthError = () => {
+const handleAuthError = (url: string) => {
+    console.error('[API] 401 Unauthorized error for:', url);
+    console.error('[API] Clearing auth state and redirecting to login');
     if (typeof window !== 'undefined') {
         // ローカルストレージをクリア
         localStorage.removeItem('user');
@@ -14,15 +16,66 @@ const handleAuthError = () => {
     }
 };
 
+// Cookieの状態を確認する関数
+const checkCookies = () => {
+    if (typeof document !== 'undefined') {
+        const cookies = document.cookie.split(';').reduce((acc, cookie) => {
+            const [key, value] = cookie.trim().split('=');
+            acc[key] = value;
+            return acc;
+        }, {} as Record<string, string>);
+        console.log('[API] Current cookies:', cookies);
+        console.log('[API] access_token cookie exists:', 'access_token' in cookies);
+        return cookies;
+    }
+    return {};
+};
+
 // 認証付きfetchのラッパー
 const authenticatedFetch = async (url: string, options: RequestInit = {}) => {
+    console.log('[API] Making authenticated request to:', url);
+    console.log('[API] API_URL:', API_URL);
+    console.log('[API] Full URL:', url);
+    
+    // Cookieの状態を確認
+    checkCookies();
+    
+    // localStorageからトークンを取得
+    let token = null;
+    if (typeof window !== 'undefined') {
+        token = localStorage.getItem('auth_token');
+        console.log('[API] Found auth_token in localStorage:', !!token);
+    }
+    
+    const headers = {
+        ...options.headers,
+        // トークンがあればAuthorizationヘッダーに追加
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+    };
+    
     const response = await fetch(url, {
         ...options,
+        headers, // 更新されたヘッダーを使用
         credentials: 'include',
     });
     
+    console.log('[API] Response status:', response.status, 'for:', url);
+    console.log('[API] Response headers:', {
+        'set-cookie': response.headers.get('set-cookie'),
+        'content-type': response.headers.get('content-type'),
+    });
+    
+    // レスポンス後にCookieを再確認
+    if (response.status === 200 || response.status === 201) {
+        setTimeout(() => {
+            console.log('[API] Cookies after successful response:');
+            checkCookies();
+        }, 100);
+    }
+    
     if (response.status === 401) {
-        handleAuthError();
+        console.error('[API] 401 Unauthorized - Cookie may not be sent correctly');
+        handleAuthError(url);
         const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.detail || '認証が必要です。ログインしてください。');
     }

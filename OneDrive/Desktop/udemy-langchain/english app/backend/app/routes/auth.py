@@ -7,9 +7,26 @@ router = APIRouter(prefix="/api/auth", tags=["auth"])
 auth_service = AuthService()
 
 # 環境変数からCookie設定を取得（本番環境ではsecure=True、開発環境ではsecure=False）
-IS_PRODUCTION = os.getenv("ENVIRONMENT", "development") == "production"
-COOKIE_SECURE = os.getenv("COOKIE_SECURE", "false").lower() == "true" or IS_PRODUCTION
+# RailwayのURLが含まれている場合は本番環境とみなす
+RAILWAY_ENVIRONMENT = os.getenv("RAILWAY_ENVIRONMENT")
+IS_PRODUCTION = (
+    os.getenv("ENVIRONMENT", "development") == "production" or 
+    RAILWAY_ENVIRONMENT is not None or
+    os.getenv("RAILWAY_SERVICE_NAME") is not None
+)
+
+# クロスオリジンの場合は常にSecure=True、SameSite=Noneが必要
+# Railwayにデプロイされている場合は常にHTTPSなのでSecure=True
+COOKIE_SECURE = (
+    os.getenv("COOKIE_SECURE", "false").lower() == "true" or 
+    IS_PRODUCTION or
+    RAILWAY_ENVIRONMENT is not None
+)
 COOKIE_SAMESITE = "none" if COOKIE_SECURE else "lax"  # クロスオリジンの場合はnoneが必要
+
+# デバッグ用：環境変数の状態を出力
+print(f"[Auth] Environment check - IS_PRODUCTION: {IS_PRODUCTION}, COOKIE_SECURE: {COOKIE_SECURE}, COOKIE_SAMESITE: {COOKIE_SAMESITE}", flush=True)
+print(f"[Auth] RAILWAY_ENVIRONMENT: {RAILWAY_ENVIRONMENT}, ENVIRONMENT: {os.getenv('ENVIRONMENT', 'not set')}", flush=True)
 
 class UserAuth(BaseModel):
     email: EmailStr
@@ -36,17 +53,37 @@ async def login(user_data: UserAuth, response: Response):
     
     token = auth_service.create_access_token({"sub": user["email"]})
     
+    # Cookie設定のデバッグ情報
+    print(f"[Auth] Cookie settings - Secure: {COOKIE_SECURE}, SameSite: {COOKIE_SAMESITE}", flush=True)
+    print(f"[Auth] Setting cookie for user: {user['email']}", flush=True)
+    print(f"[Auth] Token length: {len(token)}", flush=True)
+    
     # httpOnly Cookieに保存
+    # クロスオリジンの場合、domainは設定しない（ブラウザが自動的に設定）
+    # path="/" を明示的に設定して、すべてのパスでCookieが有効になるようにする
     response.set_cookie(
         key="access_token",
         value=token,
         httponly=True,
         max_age=7 * 24 * 60 * 60, # 7日間
         samesite=COOKIE_SAMESITE,
-        secure=COOKIE_SECURE
+        secure=COOKIE_SECURE,
+        path="/",  # 明示的にパスを設定
+        # domainは設定しない（クロスオリジンの場合、ブラウザが自動的に設定）
     )
     
-    return {"message": "ログインに成功しました", "email": user["email"]}
+    # レスポンスヘッダーを確認
+    cookie_header = response.headers.get("set-cookie", "NOT SET")
+    print(f"[Auth] Set-Cookie header: {cookie_header}", flush=True)
+    print(f"[Auth] Cookie set successfully", flush=True)
+    
+    # Cookie認証だけでなく、Bearer認証もサポートするためにトークンを返す
+    return {
+        "message": "ログインに成功しました", 
+        "email": user["email"],
+        "access_token": token,
+        "token_type": "bearer"
+    }
 
 @router.post("/logout")
 async def logout(response: Response):
