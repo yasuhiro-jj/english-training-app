@@ -1,9 +1,15 @@
 from fastapi import APIRouter, HTTPException, Response, Depends
 from pydantic import BaseModel, EmailStr
 from app.services.auth_service import AuthService
+import os
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 auth_service = AuthService()
+
+# 環境変数からCookie設定を取得（本番環境ではsecure=True、開発環境ではsecure=False）
+IS_PRODUCTION = os.getenv("ENVIRONMENT", "development") == "production"
+COOKIE_SECURE = os.getenv("COOKIE_SECURE", "false").lower() == "true" or IS_PRODUCTION
+COOKIE_SAMESITE = "none" if COOKIE_SECURE else "lax"  # クロスオリジンの場合はnoneが必要
 
 class UserAuth(BaseModel):
     email: EmailStr
@@ -36,13 +42,17 @@ async def login(user_data: UserAuth, response: Response):
         value=token,
         httponly=True,
         max_age=7 * 24 * 60 * 60, # 7日間
-        samesite="lax",
-        secure=False  # 開発環境のため
+        samesite=COOKIE_SAMESITE,
+        secure=COOKIE_SECURE
     )
     
     return {"message": "ログインに成功しました", "email": user["email"]}
 
 @router.post("/logout")
 async def logout(response: Response):
-    response.delete_cookie("access_token")
+    response.delete_cookie(
+        key="access_token",
+        samesite=COOKIE_SAMESITE,
+        secure=COOKIE_SECURE
+    )
     return {"message": "ログアウトしました"}

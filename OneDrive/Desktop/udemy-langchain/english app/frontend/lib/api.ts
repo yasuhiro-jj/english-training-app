@@ -3,6 +3,33 @@
 // 本番環境: RailwayのURL（例: https://your-app.up.railway.app）
 const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
 
+// 401エラー時の処理（認証エラー）
+const handleAuthError = () => {
+    if (typeof window !== 'undefined') {
+        // ローカルストレージをクリア
+        localStorage.removeItem('user');
+        localStorage.removeItem('auth_token');
+        // ログインページにリダイレクト
+        window.location.href = '/login';
+    }
+};
+
+// 認証付きfetchのラッパー
+const authenticatedFetch = async (url: string, options: RequestInit = {}) => {
+    const response = await fetch(url, {
+        ...options,
+        credentials: 'include',
+    });
+    
+    if (response.status === 401) {
+        handleAuthError();
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.detail || '認証が必要です。ログインしてください。');
+    }
+    
+    return response;
+};
+
 export interface SessionResponse {
     session_id: string;
     question: string;
@@ -56,9 +83,8 @@ export interface LessonGenerateResponse {
 
 export const api = {
     async generateLessons(): Promise<LessonGenerateResponse> {
-        const response = await fetch(`${API_URL}/api/session/generate`, {
+        const response = await authenticatedFetch(`${API_URL}/api/session/generate`, {
             method: 'GET',
-            credentials: 'include',
         });
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
@@ -82,9 +108,8 @@ export const api = {
     },
 
     async generateLessonAuto(): Promise<LessonGenerateResponse> {
-        const response = await fetch(`${API_URL}/lesson/generate/auto`, {
+        const response = await authenticatedFetch(`${API_URL}/lesson/generate/auto`, {
             method: 'GET',
-            credentials: 'include',
         });
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
@@ -110,10 +135,9 @@ export const api = {
             throw new Error("URLまたはコンテンツが必要です");
         }
 
-        const response = await fetch(`${API_URL}/api/session/start`, {
+        const response = await authenticatedFetch(`${API_URL}/api/session/start`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
             body: JSON.stringify(body),
         });
 
@@ -149,9 +173,7 @@ export const api = {
     },
 
     async getRecentFeedback(limit: number = 10): Promise<FeedbackItem[]> {
-        const response = await fetch(`${API_URL}/api/feedback/recent?limit=${limit}`, {
-            credentials: 'include',
-        });
+        const response = await authenticatedFetch(`${API_URL}/api/feedback/recent?limit=${limit}`);
 
         if (!response.ok) {
             throw new Error('フィードバックの取得に失敗しました');
@@ -162,9 +184,7 @@ export const api = {
     },
 
     async getDashboardStats(): Promise<any> {
-        const response = await fetch(`${API_URL}/api/dashboard/stats`, {
-            credentials: 'include',
-        });
+        const response = await authenticatedFetch(`${API_URL}/api/dashboard/stats`);
         if (!response.ok) {
             throw new Error('統計情報の取得に失敗しました');
         }
@@ -172,10 +192,9 @@ export const api = {
     },
 
     async sendMessage(message: string, history: any[]): Promise<{ response: string }> {
-        const response = await fetch(`${API_URL}/api/chat`, {
+        const response = await authenticatedFetch(`${API_URL}/api/chat`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
             body: JSON.stringify({ message, history }),
         });
         if (!response.ok) {
