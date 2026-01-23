@@ -1,12 +1,14 @@
 'use client';
 
-import { useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { api, LessonOption } from '@/lib/api';
 import AudioRecorder from '@/components/AudioRecorder';
+import { useSearchParams } from 'next/navigation';
 
-export default function SessionPage() {
+function SessionPageInner() {
+    const searchParams = useSearchParams();
     // added 'learning' step for reading the article before recording
-    const [step, setStep] = useState<'input' | 'selection' | 'learning' | 'recording' | 'analyzing' | 'complete'>('input');
+    const [step, setStep] = useState<'input' | 'starting' | 'selection' | 'learning' | 'recording' | 'analyzing' | 'complete'>('input');
     const [articleUrl, setArticleUrl] = useState('');
     const [sessionId, setSessionId] = useState('');
     const [currentLesson, setCurrentLesson] = useState<LessonOption | null>(null);
@@ -16,6 +18,59 @@ export default function SessionPage() {
     const [analysisResult, setAnalysisResult] = useState<any | null>(null);
     const [lessons, setLessons] = useState<LessonOption[]>([]);
     const [isGenerating, setIsGenerating] = useState(false);
+
+    // If navigated from /lesson, auto-start session with provided lesson JSON
+    useEffect(() => {
+        const lessonParam = searchParams?.get('lesson');
+        if (!lessonParam) return;
+
+        let parsedLesson: LessonOption | null = null;
+        try {
+            // lesson is passed as encodeURIComponent(JSON.stringify(lesson))
+            const decoded = decodeURIComponent(lessonParam);
+            parsedLesson = JSON.parse(decoded) as LessonOption;
+        } catch {
+            // Some environments may already provide decoded query params
+            try {
+                parsedLesson = JSON.parse(lessonParam) as LessonOption;
+            } catch {
+                parsedLesson = null;
+            }
+        }
+
+        if (!parsedLesson) {
+            setError('レッスン情報の読み込みに失敗しました。もう一度レッスンを生成して開始してください。');
+            return;
+        }
+
+        // basic validation
+        if (!parsedLesson.title || !parsedLesson.content) {
+            setError('レッスン情報が不完全です。もう一度レッスンを生成して開始してください。');
+            return;
+        }
+
+        let cancelled = false;
+        setError('');
+        setStep('starting');
+
+        (async () => {
+            try {
+                const response = await api.startSession(undefined, parsedLesson as any);
+                if (cancelled) return;
+                setSessionId(response.session_id);
+                setCurrentLesson(parsedLesson);
+                setStep('learning');
+            } catch (err: any) {
+                if (cancelled) return;
+                setError(err?.message || 'セッションの開始に失敗しました');
+                setStep('input');
+            }
+        })();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [searchParams]);
 
     // Old method for URL input (kept for compatibility or removal)
     const handleStartSessionUrl = async () => {
@@ -155,6 +210,13 @@ export default function SessionPage() {
                                     これには30秒ほどかかる場合があります...
                                 </p>
                             )}
+                        </div>
+                    )}
+
+                    {step === 'starting' && (
+                        <div className="text-center py-12">
+                            <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-indigo-600 mx-auto mb-4"></div>
+                            <p className="text-xl text-gray-700">レッスンを開始しています...</p>
                         </div>
                     )}
 
@@ -375,5 +437,27 @@ export default function SessionPage() {
                 </div>
             </div>
         </div>
+    );
+}
+
+export default function SessionPage() {
+    // Next.js requires useSearchParams usage to be wrapped in Suspense
+    return (
+        <Suspense
+            fallback={
+                <div className="min-h-screen bg-gray-50 pt-32 pb-12 font-sans">
+                    <div className="container mx-auto px-4 max-w-4xl">
+                        <div className="bg-white rounded-2xl shadow-xl p-8">
+                            <div className="text-center py-12">
+                                <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-indigo-600 mx-auto mb-4"></div>
+                                <p className="text-xl text-gray-700">ページを準備しています...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        >
+            <SessionPageInner />
+        </Suspense>
     );
 }
