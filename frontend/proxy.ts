@@ -2,27 +2,17 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 export function proxy(request: NextRequest) {
-    const token = request.cookies.get('access_token');
-    const { pathname } = request.nextUrl;
-
-    // 保護したいルートのリスト
-    const protectedRoutes = ['/session'];
-
-    // もし保護されたルートにアクセスしようとしていて、トークンがない場合
-    if (protectedRoutes.some(route => pathname.startsWith(route))) {
-        if (!token) {
-            const url = new URL('/login', request.url);
-            return NextResponse.redirect(url);
-        }
-    }
-
-    // すでにログインしているのに、ログイン/サインアップ画面に行こうとした場合
-    if (pathname === '/login' || pathname === '/signup') {
-        if (token) {
-            return NextResponse.redirect(new URL('/', request.url));
-        }
-    }
-
+    /**
+     * NOTE:
+     * このフロントは localStorage の `auth_token`(Bearer) を主に使って認証します。
+     * サーバー側（Middleware相当）から localStorage は参照できないため、
+     * Cookie(access_token) だけで /session を保護すると
+     * 「/session -> /login -> /dashboard」ループが発生します。
+     *
+     * ここではリダイレクトを行わず、各ページ側のガード（useRequireAuth）と
+     * APIの401処理に任せます。
+     */
+    void request;
     return NextResponse.next();
 }
 

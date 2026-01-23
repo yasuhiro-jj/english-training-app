@@ -1,12 +1,14 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { Suspense, useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { api, LessonOption } from '../../lib/api';
 import AudioRecorder from '../../components/AudioRecorder';
 import { useRequireAuth } from '../lib/hooks/useRequireAuth';
 
-export default function SessionPage() {
+function SessionPageInner() {
     const { user, loading: authLoading } = useRequireAuth();
+    const searchParams = useSearchParams();
     // added 'learning' step for reading the article before recording
     const [step, setStep] = useState<'input' | 'selection' | 'learning' | 'recording' | 'analyzing' | 'complete'>('input');
     const [articleUrl, setArticleUrl] = useState('');
@@ -18,10 +20,74 @@ export default function SessionPage() {
     const [analysisResult, setAnalysisResult] = useState<any | null>(null);
     const [lessons, setLessons] = useState<LessonOption[]>([]);
     const [isGenerating, setIsGenerating] = useState(false);
+    const [hasProcessedLesson, setHasProcessedLesson] = useState(false);
 
     useEffect(() => {
         console.log('[Session] Page Mounted');
     }, []);
+
+    // /lesson から来た場合: sessionStorage からレッスンを復元してセッション開始
+    useEffect(() => {
+        if (authLoading || hasProcessedLesson || !user) return;
+
+        const from = searchParams.get('from');
+        const processLesson = async () => {
+            try {
+                let lessonData: LessonOption | null = null;
+
+                // 1) 推奨: sessionStorage 経由
+                if (from === 'lesson') {
+                    const stored = sessionStorage.getItem('selected_lesson');
+                    if (stored) {
+                        lessonData = JSON.parse(stored);
+                    }
+                }
+
+                // 2) 互換: 旧URLクエリ lesson=...（残ってたら読む）
+                if (!lessonData) {
+                    const lessonParam = searchParams.get('lesson');
+                    if (lessonParam) {
+                        // URLSearchParamsは基本デコード済みなのでdecodeURIComponentしない
+                        lessonData = JSON.parse(lessonParam);
+                    }
+                }
+
+                if (!lessonData) {
+                    // /lesson から来たのにデータがない → 何が起きたかユーザーに明確に見せる
+                    if (from === 'lesson') {
+                        setError('レッスン情報が見つかりませんでした。/lesson に戻って「トレーニング開始」をもう一度押してください。');
+                        setHasProcessedLesson(true);
+                    }
+                    return;
+                }
+
+                console.log('[Session] Lesson data loaded, starting session...', lessonData);
+                await handleSelectLesson(lessonData);
+
+                // セッション開始まで成功したら、保存データを消す
+                if (from === 'lesson') {
+                    sessionStorage.removeItem('selected_lesson');
+                }
+
+                setHasProcessedLesson(true);
+            } catch (err) {
+                console.error('[Session] Failed to load lesson data:', err);
+                setError('レッスンデータの読み込みに失敗しました');
+                setHasProcessedLesson(true);
+            }
+        };
+
+        processLesson();
+    }, [searchParams, authLoading, user, hasProcessedLesson]);
+
+    // 認証チェック中のローディング表示
+    if (authLoading) {
+        return (
+            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
+            </div>
+        );
+    }
 
     // Old method for URL input (kept for compatibility or removal)
     const handleStartSessionUrl = async () => {
@@ -70,12 +136,24 @@ export default function SessionPage() {
 
     const handleSelectLesson = async (lesson: LessonOption) => {
         try {
-            const response = await api.startSession(undefined, lesson);
+            setError('');
+            // セッション開始中の状態が分かるように一時的に analyzing を使う
+            setStep('analyzing');
+            // LessonOptionをapi.startSessionが期待する形式に変換
+            const customContent = {
+                title: lesson.title,
+                content: lesson.content,
+                question: lesson.question || (lesson.discussion_a && lesson.discussion_a[0]) || 'What are your thoughts on this article?'
+            };
+            
+            const response = await api.startSession(undefined, customContent);
             setSessionId(response.session_id);
             setCurrentLesson(lesson);
             setStep('learning');
         } catch (err: any) {
+            console.error('[Session] handleSelectLesson error:', err);
             setError(err.message || 'セッションの開始に失敗しました');
+            setStep('input');
         }
     };
 
@@ -112,6 +190,7 @@ export default function SessionPage() {
         setError('');
         setAnalysisResult(null);
         setLessons([]);
+        setHasProcessedLesson(false);
     };
 
     return (
@@ -385,5 +464,20 @@ export default function SessionPage() {
                 </div>
             </div>
         </div>
+    );
+}
+
+export default function SessionPage() {
+    // Next.js requires useSearchParams usage to be wrapped in Suspense
+    return (
+        <Suspense
+            fallback={
+                <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
+                </div>
+            }
+        >
+            <SessionPageInner />
+        </Suspense>
     );
 }
