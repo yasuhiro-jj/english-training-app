@@ -58,6 +58,35 @@ export default function AudioRecorder({ onTranscriptChange, onDurationChange }: 
         onDurationChangeRef.current = onDurationChange;
     }, [onTranscriptChange, onDurationChange]);
 
+    // 言語変更時に録音中なら再起動する
+    const prevLangRef = useRef(lang);
+    useEffect(() => {
+        if (prevLangRef.current !== lang && isRecordingRef.current && recognitionRef.current) {
+            console.log('Language changed from', prevLangRef.current, 'to', lang, '- restarting recognition');
+            // 一度停止してから新しい言語で再起動
+            const wasRecording = isRecordingRef.current;
+            try {
+                recognitionRef.current.stop();
+                // onend ハンドラーが自動的に再起動する（isRecordingRef.current が true のため）
+                // ただし、新しいインスタンスが作成されるまで待つ必要がある
+                setTimeout(() => {
+                    if (wasRecording && recognitionRef.current) {
+                        recognitionRef.current.lang = lang;
+                        try {
+                            recognitionRef.current.start();
+                            console.log('Recognition restarted with new language:', lang);
+                        } catch (e) {
+                            console.log('Error restarting recognition with new language:', e);
+                        }
+                    }
+                }, 500);
+            } catch (e) {
+                console.log('Error stopping recognition for language change:', e);
+            }
+        }
+        prevLangRef.current = lang;
+    }, [lang]);
+
     useEffect(() => {
         // Web Speech API の初期化
         const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
