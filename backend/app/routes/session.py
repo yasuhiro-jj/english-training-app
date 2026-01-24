@@ -100,6 +100,17 @@ async def start_session(request: SessionCreate):
         # セッションIDを生成
         session_id = str(uuid.uuid4())
         
+        # レッスン情報を抽出（custom_lesson_dataがある場合）
+        lesson_data = None
+        if request.custom_lesson_data:
+            lesson_data = {
+                "title": request.custom_lesson_data.get("title", ""),
+                "category": request.custom_lesson_data.get("category", ""),
+                "level": request.custom_lesson_data.get("level", ""),
+                "date": request.custom_lesson_data.get("date", ""),
+                "japanese_title": request.custom_lesson_data.get("japanese_title", "")
+            }
+        
         # セッション情報を保存
         sessions[session_id] = {
             "article_url": request.article_url or "generated",
@@ -107,7 +118,8 @@ async def start_session(request: SessionCreate):
             "article_content": article_content,
             "question": question,
             "topic": request.topic or article_title,
-            "created_at": datetime.now().isoformat()
+            "created_at": datetime.now().isoformat(),
+            "lesson_data": lesson_data  # レッスン情報を追加
         }
         
         return SessionResponse(
@@ -141,6 +153,9 @@ async def submit_transcript(request: TranscriptSubmit, user: dict = Depends(get_
         # 発話を解析（これがメイン機能）
         feedback_items = await ai_service.analyze_speech(request.transcript)
         
+        # レッスン情報を取得
+        lesson_data = session.get("lesson_data")
+        
         # 会話ログをNotionに保存（失敗しても続行）
         try:
             not_service_res = notion_service.create_conversation_log(
@@ -148,7 +163,11 @@ async def submit_transcript(request: TranscriptSubmit, user: dict = Depends(get_
                 article_url=session["article_url"],
                 full_transcript=request.transcript,
                 duration_seconds=request.duration_seconds,
-                user_email=user_email
+                user_email=user_email,
+                lesson_title=lesson_data.get("title") if lesson_data and isinstance(lesson_data, dict) else None,
+                lesson_category=lesson_data.get("category") if lesson_data and isinstance(lesson_data, dict) else None,
+                lesson_level=lesson_data.get("level") if lesson_data and isinstance(lesson_data, dict) else None,
+                lesson_date=lesson_data.get("date") if lesson_data and isinstance(lesson_data, dict) else None
             )
         except Exception as e:
             print(f"Notion conversation log save failed (non-critical): {e}")
@@ -159,7 +178,11 @@ async def submit_transcript(request: TranscriptSubmit, user: dict = Depends(get_
                 notion_service.create_multiple_feedback_items(
                     feedback_items=feedback_items,
                     session_id=request.session_id,
-                    user_email=user_email
+                    user_email=user_email,
+                    lesson_title=lesson_data.get("title") if lesson_data and isinstance(lesson_data, dict) else None,
+                    lesson_category=lesson_data.get("category") if lesson_data and isinstance(lesson_data, dict) else None,
+                    lesson_level=lesson_data.get("level") if lesson_data and isinstance(lesson_data, dict) else None,
+                    lesson_date=lesson_data.get("date") if lesson_data and isinstance(lesson_data, dict) else None
                 )
             except Exception as e:
                 print(f"Notion feedback save failed (non-critical): {e}")

@@ -2,6 +2,7 @@ from notion_client import Client
 from datetime import datetime
 import os
 from typing import List, Dict
+import re
 
 
 class NotionService:
@@ -12,38 +13,91 @@ class NotionService:
         self.conversation_db_id = os.getenv("NOTION_CONVERSATION_DB_ID")
         self.feedback_db_id = os.getenv("NOTION_FEEDBACK_DB_ID")
     
+    def _normalize_date(self, date_str: str) -> str:
+        """
+        日付文字列をYYYY-MM-DD形式に正規化（時間部分を削除）
+        """
+        if not date_str:
+            return None
+        
+        # YYYY-MM-DD形式にマッチ（時間部分があれば削除）
+        match = re.match(r'(\d{4}-\d{2}-\d{2})', date_str)
+        if match:
+            return match.group(1)
+        
+        # その他の形式を試す
+        try:
+            # ISO形式の日時から日付部分を抽出
+            dt = datetime.fromisoformat(date_str.replace('Z', '+00:00'))
+            return dt.strftime('%Y-%m-%d')
+        except:
+            # パースできない場合はそのまま返す（エラーになる可能性がある）
+            return date_str
+    
     def create_conversation_log(
         self,
         topic: str,
         article_url: str,
         full_transcript: str,
         duration_seconds: int,
-        user_email: str = ""
+        user_email: str = "",
+        lesson_title: str = None,
+        lesson_category: str = None,
+        lesson_level: str = None,
+        lesson_date: str = None
     ) -> str:
         """会話ログをNotionに保存"""
         try:
+            properties = {
+                "Topic": {
+                    "title": [{"text": {"content": topic}}]
+                },
+                "Date": {
+                    "date": {"start": datetime.now().isoformat()}
+                },
+                "ArticleURL": {
+                    "url": article_url
+                },
+                "FullTranscript": {
+                    "rich_text": [{"text": {"content": full_transcript}}]
+                },
+                "DurationSeconds": {
+                    "number": duration_seconds
+                },
+                "UserEmail": {
+                    "rich_text": [{"text": {"content": user_email}}]
+                }
+            }
+            
+            # レッスン情報を追加（存在する場合のみ）
+            if lesson_title:
+                properties["LessonTitle"] = {
+                    "rich_text": [{"text": {"content": lesson_title}}]
+                }
+            if lesson_category:
+                properties["LessonCategory"] = {
+                    "select": {"name": lesson_category}
+                }
+            if lesson_level:
+                properties["LessonLevel"] = {
+                    "select": {"name": lesson_level}
+                }
+            if lesson_date:
+                # 日付を正規化（YYYY-MM-DD形式、時間部分なし）
+                normalized_date = self._normalize_date(lesson_date)
+                if normalized_date:
+                    properties["LessonDate"] = {
+                        "date": {"start": normalized_date}
+                    }
+                else:
+                    # 日付パースに失敗した場合はrich_textとして保存
+                    properties["LessonDate"] = {
+                        "rich_text": [{"text": {"content": lesson_date}}]
+                    }
+            
             response = self.client.pages.create(
                 parent={"database_id": self.conversation_db_id},
-                properties={
-                    "Topic": {
-                        "title": [{"text": {"content": topic}}]
-                    },
-                    "Date": {
-                        "date": {"start": datetime.now().isoformat()}
-                    },
-                    "ArticleURL": {
-                        "url": article_url
-                    },
-                    "FullTranscript": {
-                        "rich_text": [{"text": {"content": full_transcript}}]
-                    },
-                    "DurationSeconds": {
-                        "number": duration_seconds
-                    },
-                    "UserEmail": {
-                        "rich_text": [{"text": {"content": user_email}}]
-                    }
-                }
+                properties=properties
             )
             return response["id"]
         except Exception as e:
@@ -57,35 +111,67 @@ class NotionService:
         category: str,
         reason: str,
         session_id: str,
-        user_email: str = ""
+        user_email: str = "",
+        lesson_title: str = None,
+        lesson_category: str = None,
+        lesson_level: str = None,
+        lesson_date: str = None
     ) -> str:
         """フィードバック項目をNotionに保存"""
         try:
+            properties = {
+                "OriginalSentence": {
+                    "title": [{"text": {"content": original_sentence}}]
+                },
+                "CorrectedSentence": {
+                    "rich_text": [{"text": {"content": corrected_sentence}}]
+                },
+                "Category": {
+                    "select": {"name": category}
+                },
+                "Reason": {
+                    "rich_text": [{"text": {"content": reason}}]
+                },
+                "Status": {
+                    "select": {"name": "New"}
+                },
+                "SessionID": {
+                    "rich_text": [{"text": {"content": session_id}}]
+                },
+                "UserEmail": {
+                    "rich_text": [{"text": {"content": user_email}}]
+                }
+            }
+            
+            # レッスン情報を追加（存在する場合のみ）
+            if lesson_title:
+                properties["LessonTitle"] = {
+                    "rich_text": [{"text": {"content": lesson_title}}]
+                }
+            if lesson_category:
+                properties["LessonCategory"] = {
+                    "select": {"name": lesson_category}
+                }
+            if lesson_level:
+                properties["LessonLevel"] = {
+                    "select": {"name": lesson_level}
+                }
+            if lesson_date:
+                # 日付を正規化（YYYY-MM-DD形式、時間部分なし）
+                normalized_date = self._normalize_date(lesson_date)
+                if normalized_date:
+                    properties["LessonDate"] = {
+                        "date": {"start": normalized_date}
+                    }
+                else:
+                    # 日付パースに失敗した場合はrich_textとして保存
+                    properties["LessonDate"] = {
+                        "rich_text": [{"text": {"content": lesson_date}}]
+                    }
+            
             response = self.client.pages.create(
                 parent={"database_id": self.feedback_db_id},
-                properties={
-                    "OriginalSentence": {
-                        "title": [{"text": {"content": original_sentence}}]
-                    },
-                    "CorrectedSentence": {
-                        "rich_text": [{"text": {"content": corrected_sentence}}]
-                    },
-                    "Category": {
-                        "select": {"name": category}
-                    },
-                    "Reason": {
-                        "rich_text": [{"text": {"content": reason}}]
-                    },
-                    "Status": {
-                        "select": {"name": "New"}
-                    },
-                    "SessionID": {
-                        "rich_text": [{"text": {"content": session_id}}]
-                    },
-                    "UserEmail": {
-                        "rich_text": [{"text": {"content": user_email}}]
-                    }
-                }
+                properties=properties
             )
             return response["id"]
         except Exception as e:
@@ -96,7 +182,11 @@ class NotionService:
         self,
         feedback_items: List[Dict],
         session_id: str,
-        user_email: str = ""
+        user_email: str = "",
+        lesson_title: str = None,
+        lesson_category: str = None,
+        lesson_level: str = None,
+        lesson_date: str = None
     ) -> List[str]:
         """複数のフィードバック項目を一括保存"""
         created_ids = []
@@ -108,7 +198,11 @@ class NotionService:
                     category=item["category"],
                     reason=item["reason"],
                     session_id=session_id,
-                    user_email=user_email
+                    user_email=user_email,
+                    lesson_title=lesson_title,
+                    lesson_category=lesson_category,
+                    lesson_level=lesson_level,
+                    lesson_date=lesson_date
                 )
                 created_ids.append(page_id)
             except Exception as e:
