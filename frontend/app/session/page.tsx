@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import { api, LessonOption } from '../../lib/api';
 import AudioRecorder from '../../components/AudioRecorder';
 import { useRequireAuth } from '../lib/hooks/useRequireAuth';
+import { convertJapaneseNamesInText } from '../../lib/japaneseToRomaji';
 
 function SessionPageInner() {
     const { user, loading: authLoading } = useRequireAuth();
@@ -320,7 +321,10 @@ function SessionPageInner() {
                                             if (window.speechSynthesis.speaking) {
                                                 window.speechSynthesis.cancel();
                                             } else {
-                                                const utterance = new SpeechSynthesisUtterance(currentLesson.content);
+                                                // 日本語名をローマ字読みに変換
+                                                const textWithRomaji = convertJapaneseNamesInText(currentLesson.content);
+                                                console.log('[Read Aloud] Speaking text with Japanese names converted to romaji');
+                                                const utterance = new SpeechSynthesisUtterance(textWithRomaji);
                                                 utterance.lang = 'en-US';
                                                 utterance.rate = 0.9; // Slightly slower for clarity
                                                 window.speechSynthesis.speak(utterance);

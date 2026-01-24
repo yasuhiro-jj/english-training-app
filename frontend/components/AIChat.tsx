@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import { convertJapaneseNamesInText } from '../lib/japaneseToRomaji';
 import { api } from '@/lib/api';
 
 export default function AIChat() {
@@ -134,7 +135,9 @@ export default function AIChat() {
             console.error('Error resetting speech synthesis:', e);
         }
 
-        const utterance = new SpeechSynthesisUtterance(text);
+        // 日本語名をローマ字読みに変換
+        const textWithRomaji = convertJapaneseNamesInText(text);
+        const utterance = new SpeechSynthesisUtterance(textWithRomaji);
         utterance.lang = 'en-US';
         utterance.rate = 0.9;
 
