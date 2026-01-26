@@ -147,10 +147,9 @@ export const api = {
     },
 
     async generateLessonFromUrl(newsUrl: string): Promise<LessonGenerateResponse> {
-        const response = await fetch(`${API_URL}/lesson/generate`, {
+        const response = await authenticatedFetch(`${API_URL}/lesson/generate`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
             body: JSON.stringify({ news_url: newsUrl }),
         });
         if (!response.ok) {
