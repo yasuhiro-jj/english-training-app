@@ -5,23 +5,35 @@ import random
 import time
 import asyncio
 import logging
+from urllib.parse import urlparse
 
 logger = logging.getLogger(__name__)
 
 class NewsService:
     """複数のニュースソースから記事を取得するサービス"""
     
-    def _get_headers(self) -> Dict[str, str]:
+    def _get_headers(self, *, referer: Optional[str] = None, accept_language: Optional[str] = None) -> Dict[str, str]:
         """403エラー対策のためのヘッダーを取得"""
-        return {
+        headers: Dict[str, str] = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
-            "Accept-Language": "ja,en-US;q=0.9,en;q=0.8",
+            "Accept-Language": accept_language or "ja,en-US;q=0.9,en;q=0.8",
             "Accept-Encoding": "gzip, deflate, br",
-            "Referer": "https://mainichi.jp/",
             "Connection": "keep-alive",
             "Upgrade-Insecure-Requests": "1",
         }
+        if referer:
+            headers["Referer"] = referer
+        return headers
+
+    def _guess_referer(self, url: str) -> Optional[str]:
+        try:
+            p = urlparse(url)
+            if not p.scheme or not p.netloc:
+                return None
+            return f"{p.scheme}://{p.netloc}/"
+        except Exception:
+            return None
     
     async def scrape_article(self, url: str, max_retries: int = 3) -> Optional[Dict[str, str]]:
         """
@@ -34,7 +46,7 @@ class NewsService:
         Returns:
             Dict with keys: title, content, url
         """
-        headers = self._get_headers()
+        headers = self._get_headers(referer=self._guess_referer(url))
         
         for attempt in range(max_retries):
             try:
@@ -127,7 +139,7 @@ class NewsService:
             Dict with keys: title, content, url
         """
         base_url = "https://mainichi.jp/"
-        headers = self._get_headers()
+        headers = self._get_headers(referer=base_url)
         
         try:
             async with httpx.AsyncClient(verify=False, headers=headers, timeout=15.0) as client:
@@ -206,6 +218,8 @@ class NewsService:
         # ニュースソースのリスト（優先順位順）
         sources = [
             ("mainichi", self.fetch_top_news),
+            ("nhk_rss", self._fetch_nhk_rss),
+            ("bbc_rss", self._fetch_bbc_rss),
             ("bbc", self._fetch_bbc_news),
             ("nhk", self._fetch_nhk_news),
         ]
@@ -226,6 +240,74 @@ class NewsService:
         
         logger.error("すべてのニュースソースからの取得に失敗")
         return None
+
+    async def _fetch_nhk_rss(self) -> Optional[Dict[str, str]]:
+        """
+        NHK RSSから記事を取得（ページ取得が弾かれる環境のフォールバック）
+        - RSSのdescriptionは要約なので、記事本文が取れない場合はdescriptionをcontentとして返す
+        """
+        rss_url = "https://www3.nhk.or.jp/rss/news/cat0.xml"
+        headers = self._get_headers(referer="https://www3.nhk.or.jp/news/")
+
+        try:
+            async with httpx.AsyncClient(verify=False, headers=headers, timeout=15.0) as client:
+                res = await client.get(rss_url, follow_redirects=True)
+                res.raise_for_status()
+
+            soup = BeautifulSoup(res.text, "xml")
+            item = soup.find("item")
+            if not item:
+                return None
+
+            title = (item.find("title").get_text(strip=True) if item.find("title") else "NHK News")
+            link = (item.find("link").get_text(strip=True) if item.find("link") else "")
+            desc = (item.find("description").get_text(strip=True) if item.find("description") else "")
+
+            if link:
+                article = await self.scrape_article(link)
+                if article and article.get("content"):
+                    return article
+
+            # フォールバック：RSSのdescriptionを返す
+            if desc:
+                return {"title": title, "content": desc, "url": link or rss_url}
+            return None
+        except Exception as e:
+            logger.warning(f"NHK RSS取得エラー: {e}")
+            return None
+
+    async def _fetch_bbc_rss(self) -> Optional[Dict[str, str]]:
+        """
+        BBC RSSから記事を取得（ページ取得が弾かれる環境のフォールバック）
+        """
+        rss_url = "https://feeds.bbci.co.uk/news/rss.xml"
+        headers = self._get_headers(referer="https://www.bbc.com/news", accept_language="en-US,en;q=0.9")
+
+        try:
+            async with httpx.AsyncClient(verify=False, headers=headers, timeout=15.0) as client:
+                res = await client.get(rss_url, follow_redirects=True)
+                res.raise_for_status()
+
+            soup = BeautifulSoup(res.text, "xml")
+            item = soup.find("item")
+            if not item:
+                return None
+
+            title = (item.find("title").get_text(strip=True) if item.find("title") else "BBC News")
+            link = (item.find("link").get_text(strip=True) if item.find("link") else "")
+            desc = (item.find("description").get_text(strip=True) if item.find("description") else "")
+
+            if link:
+                article = await self.scrape_article(link)
+                if article and article.get("content"):
+                    return article
+
+            if desc:
+                return {"title": title, "content": desc, "url": link or rss_url}
+            return None
+        except Exception as e:
+            logger.warning(f"BBC RSS取得エラー: {e}")
+            return None
     
     async def _fetch_bbc_news(self) -> Optional[Dict[str, str]]:
         """
@@ -234,8 +316,7 @@ class NewsService:
         try:
             # BBC Newsのトップページから記事を取得
             url = "https://www.bbc.com/news"
-            headers = self._get_headers()
-            headers["Accept-Language"] = "en-US,en;q=0.9"
+            headers = self._get_headers(referer=url, accept_language="en-US,en;q=0.9")
             
             async with httpx.AsyncClient(verify=False, headers=headers, timeout=15.0) as client:
                 response = await client.get(url, follow_redirects=True)
@@ -273,7 +354,7 @@ class NewsService:
         """
         try:
             url = "https://www3.nhk.or.jp/news/"
-            headers = self._get_headers()
+            headers = self._get_headers(referer=url)
             
             async with httpx.AsyncClient(verify=False, headers=headers, timeout=15.0) as client:
                 response = await client.get(url, follow_redirects=True)
