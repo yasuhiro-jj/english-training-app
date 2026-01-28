@@ -254,4 +254,13 @@ export const api = {
         }
         return response.json();
     },
+
+    async getLessonHistory(limit: number = 50): Promise<LessonOption[]> {
+        const response = await authenticatedFetch(`${API_URL}/lesson/history?limit=${limit}`);
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.detail || '記事履歴の取得に失敗しました');
+        }
+        return response.json();
+    },
 };

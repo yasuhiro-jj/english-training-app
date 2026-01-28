@@ -1,8 +1,9 @@
 from fastapi import APIRouter, HTTPException, Depends
-from app.models.schemas import LessonGenerateRequest, LessonGenerateResponse
+from app.models.schemas import LessonGenerateRequest, LessonGenerateResponse, LessonOption
 from app.services import AIService, NewsService, NotionService
 from app.deps import get_current_user
 import logging
+from typing import List
 
 router = APIRouter(prefix="/lesson", tags=["lesson"])
 
