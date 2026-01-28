@@ -8,7 +8,18 @@ class AIService:
     """OpenAI API連携サービス"""
     
     def __init__(self):
-        self.client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        api_key = os.getenv("OPENAI_API_KEY")
+        # 起動時に環境変数が未設定でもサーバー全体が落ちないようにする
+        # （実際にAI機能を使うタイミングで明示的にエラーにする）
+        if not api_key:
+            self.client = None
+        else:
+            self.client = AsyncOpenAI(api_key=api_key)
+
+    def _require_client(self) -> AsyncOpenAI:
+        if self.client is None:
+            raise RuntimeError("OPENAI_API_KEY is not configured")
+        return self.client
     
     async def generate_question(self, article_content: str, article_title: str = "") -> str:
         """記事に基づいて質問を生成"""
@@ -30,7 +41,7 @@ class AIService:
 """
         
         try:
-            response = await self.client.chat.completions.create(
+            response = await self._require_client().chat.completions.create(
                 model="gpt-4o-mini",
                 messages=[
                     {"role": "system", "content": "あなたは優秀な英会話コーチです。"},
@@ -87,7 +98,7 @@ class AIService:
         """
         
         try:
-            response = await self.client.chat.completions.create(
+            response = await self._require_client().chat.completions.create(
                 model="gpt-4o-mini",
                 messages=[
                     {"role": "system", "content": "You are a professional English coach. Output only raw JSON."},
@@ -124,7 +135,7 @@ class AIService:
 """
         
         try:
-            response = await self.client.chat.completions.create(
+            response = await self._require_client().chat.completions.create(
                 model="gpt-4o-mini",
                 messages=[
                     {"role": "system", "content": "あなたは要約の専門家です。"},
@@ -214,7 +225,7 @@ class AIService:
 """
         print(f"[Backend] AI Prompt constructed (first 200 chars): {prompt[:200]}...")
         
-        response = await self.client.chat.completions.create(
+        response = await self._require_client().chat.completions.create(
             model="gpt-4o-mini",
             messages=[
                 {"role": "system", "content": "You are a professional English education content creator. Output valid JSON with 'lessons' key containing a single high-quality lesson."},
@@ -286,7 +297,7 @@ Context: The user is a Japanese learner. You should focus on being supportive an
         messages.append({"role": "user", "content": message})
         
         try:
-            response = await self.client.chat.completions.create(
+            response = await self._require_client().chat.completions.create(
                 model="gpt-4o-mini",
                 messages=messages,
                 temperature=0.7

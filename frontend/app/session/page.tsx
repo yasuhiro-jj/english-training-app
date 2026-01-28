@@ -499,7 +499,7 @@ function SessionPageInner() {
                                 </button>
                                 
                                 {/* ディスカッションページに戻るボタン（一度録音ページに行ったことがある場合） */}
-                                {(transcript || step === 'recording' || step === 'complete') && (
+                                {transcript && (
                                     <button
                                         onClick={() => setStep('recording')}
                                         className="w-full bg-gray-500 hover:bg-gray-600 text-white font-semibold px-8 py-3 rounded-xl transition-colors flex items-center justify-center space-x-2"
