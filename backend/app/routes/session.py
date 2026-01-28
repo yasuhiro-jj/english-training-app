@@ -30,7 +30,8 @@ async def generate_lessons(user: dict = Depends(get_current_user)):
     try:
         # 1. ニュース取得
         print("[Backend] Fetching news...")
-        news_data = await news_service.fetch_top_news()
+        # 毎日新聞が403などで取得できない環境があるため、フォールバック付きで取得する
+        news_data = await news_service.fetch_random_news()
         
         if not news_data:
             print("[Backend] News fetch failed")
