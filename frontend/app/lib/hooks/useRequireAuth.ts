@@ -4,49 +4,37 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../auth-context';
 
-function decodeJwtSub(token: string): string | null {
-    try {
-        const parts = token.split('.');
-        if (parts.length < 2) return null;
-        const payloadB64 = parts[1];
-        const payload = payloadB64.replace(/-/g, '+').replace(/_/g, '/');
-        const padded = payload + '='.repeat((4 - (payload.length % 4)) % 4);
-        const json = atob(padded);
-        const data = JSON.parse(json) as { sub?: string };
-        return data.sub ?? null;
-    } catch {
-        return null;
-    }
-}
+// 認証を一時的に無効化する場合は、このフラグを true に設定
+const DISABLE_AUTH = process.env.NEXT_PUBLIC_DISABLE_AUTH === 'true';
 
+/**
+ * シンプルな認証チェックフック
+ * userがいなければログインページにリダイレクト
+ * 複雑な復元ロジックは削除（AuthProviderで処理）
+ * 
+ * 認証を無効化する場合: .env.local に NEXT_PUBLIC_DISABLE_AUTH=true を追加
+ */
 export function useRequireAuth() {
-    const { user, loading, login } = useAuth();
+    const { user, loading } = useAuth();
     const router = useRouter();
 
     useEffect(() => {
-        if (loading || user) return;
-
-        // レース対策:
-        // ログイン直後の画面遷移では、Contextの user が未反映の瞬間がある。
-        // localStorage にセッションがあれば復元してから判定する。
-        try {
-            const storedToken = localStorage.getItem('auth_token');
-            if (storedToken) {
-                // userが無くてもtokenがあれば sub(email) から復元してリダイレクトを防ぐ
-                const emailFromToken = decodeJwtSub(storedToken);
-                if (emailFromToken) {
-                    console.log('[AuthGuard] Restoring session from token sub, skipping redirect');
-                    login(emailFromToken, storedToken);
-                    return;
-                }
-            }
-        } catch (e) {
-            console.warn('[AuthGuard] Failed to restore session from localStorage:', e);
+        // 認証が無効化されている場合は何もしない
+        if (DISABLE_AUTH) {
+            return;
         }
 
-        console.log('[AuthGuard] Not authenticated, redirecting to /login');
-        router.replace('/login');
-    }, [user, loading, router, login]);
+        // loading中は何もしない
+        if (loading) {
+            return;
+        }
+
+        // userがいない場合、ログインページにリダイレクト
+        if (!user) {
+            console.log('[AuthGuard] Not authenticated, redirecting to /login');
+            router.replace('/login');
+        }
+    }, [user, loading, router]);
 
     return { user, loading };
 }

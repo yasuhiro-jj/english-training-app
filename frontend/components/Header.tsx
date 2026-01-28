@@ -27,10 +27,16 @@ export default function Header() {
                     {user && (
                         <nav className="flex items-center space-x-6">
                             <Link
-                                href="/session"
-                                className={`text-sm font-bold transition-colors ${pathname === '/session' ? 'text-indigo-400' : 'text-slate-400 hover:text-white'}`}
+                                href="/lesson"
+                                className={`text-sm font-bold transition-colors ${pathname === '/lesson' ? 'text-indigo-400' : 'text-slate-400 hover:text-white'}`}
                             >
                                 Daily News (Lesson)
+                            </Link>
+                            <Link
+                                href="/lessons"
+                                className={`text-sm font-bold transition-colors ${pathname === '/lessons' ? 'text-indigo-400' : 'text-slate-400 hover:text-white'}`}
+                            >
+                                過去の記事
                             </Link>
                             <Link
                                 href="/dashboard"

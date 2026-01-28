@@ -1,22 +1,82 @@
+# Frontend Setup Guide
+
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
-## Getting Started
+## 📦 インストール手順
 
-First, run the development server:
+### 1. 依存関係のインストール
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+```powershell
+cd frontend
+npm install
 ```
+
+### 2. 環境変数の設定
+
+`.env.example` をコピーして `.env.local` を作成し、以下の値を設定してください：
+
+```powershell
+# .env.exampleをコピー
+copy .env.example .env.local
+```
+
+または、手動で `.env.local` ファイルを作成：
+
+```env
+NEXT_PUBLIC_API_URL=http://localhost:8000
+```
+
+**注意**: `.env.local` はGitにコミットされません。`.env.example` はテンプレートファイルとしてGitにコミットされます。
+
+### 3. 開発サーバーの起動
+
+**基本的な起動方法:**
+```powershell
+cd frontend
+npm run dev
+```
+
+**起動コマンド（プロジェクトルートから）:**
+```powershell
+cd "c:\Users\PC user\OneDrive\Desktop\udemy-langchain\english-training-app-clean\frontend"
+npm run dev
+```
+
+cd "c:\Users\PC user\OneDrive\Desktop\udemy-langchain\english-training-app-clean\backend"
+python main.py
+
+
+
+サーバーが起動すると、以下のメッセージが表示されます：
+```
+  ▲ Next.js 16.1.1
+  - Local:        http://localhost:3000
+  - Ready in XXXms
+```
+
+### 4. ブラウザでアクセス
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+
+## 🚀 起動コマンド一覧
+
+### 開発サーバー起動
+```powershell
+npm run dev
+```
+
+### プロダクションビルド
+```powershell
+npm run build
+npm start
+```
+
+### リントチェック
+```powershell
+npm run lint
+```
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 

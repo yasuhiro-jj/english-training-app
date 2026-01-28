@@ -25,20 +25,50 @@ OPENAI_API_KEY=sk-proj-xxxxxxxxxxxxxxxx
 NOTION_TOKEN=secret_xxxxxxxxxxxxxxxx
 NOTION_CONVERSATION_DB_ID=xxxxxxxxxxxxxxxx
 NOTION_FEEDBACK_DB_ID=xxxxxxxxxxxxxxxx
+NOTION_LESSONS_DB_ID=xxxxxxxxxxxxxxxx
 PORT=8000
 HOST=0.0.0.0
 ```
 
 ### 4. サーバーの起動
 
+フロントエンド
+↓↓↓↓↓
+cd "c:\Users\PC user\OneDrive\Desktop\udemy-langchain\english-training-app-clean\frontend"
+npm run dev
+
+
+
+
+
+**基本的な起動方法:**
 ```powershell
+
+
+
+cd backend
 python main.py
 ```
 
-または
-
+**または、uvicornを直接使用:**
 ```powershell
+cd backend
 uvicorn main:app --reload --port 8000
+```
+
+**起動コマンド（プロジェクトルートから）:**
+```powershell
+cd "c:\Users\PC user\OneDrive\Desktop\udemy-langchain\english-training-app-clean\backend"
+python main.py
+```
+
+サーバーが起動すると、以下のメッセージが表示されます：
+```
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+INFO:     Started reloader process
+INFO:     Started server process
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
 ```
 
 ### 5. 動作確認

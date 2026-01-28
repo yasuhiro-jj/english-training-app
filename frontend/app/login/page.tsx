@@ -12,10 +12,16 @@ export default function LoginPage() {
 
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
-    const { login, user } = useAuth();
+    const { login, user, loading: authLoading } = useAuth();
     const router = useRouter();
 
-    // Global redirect handled by AuthProvider.
+    // 既にログイン済みの場合はダッシュボードにリダイレクト
+    useEffect(() => {
+        if (!authLoading && user) {
+            console.log('[Login] Already logged in, redirecting to dashboard');
+            router.replace('/dashboard');
+        }
+    }, [user, authLoading, router]);
 
 
     const handleSubmit = async (e: React.FormEvent) => {
