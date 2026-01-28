@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useAuth } from './lib/auth-context';
 
 export default function Home() {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
   return (
     <div className="min-h-screen bg-[#0a0c10] text-white overflow-hidden selection:bg-indigo-500/30">
       {/* Hero Background with Overlay */}
@@ -40,10 +40,14 @@ export default function Home() {
         {/* Action Button */}
         <div className="mb-20 animate-fade-in delay-300">
           <Link
-            href={user ? "/session" : "/login"}
+            href={loading ? "#" : (user ? "/session" : "/login")}
+            aria-disabled={loading}
             className="group relative inline-flex items-center justify-center px-12 py-5 font-bold text-white transition-all duration-300 bg-indigo-600 rounded-full hover:bg-indigo-500 shadow-[0_0_20px_rgba(79,70,229,0.4)] hover:shadow-[0_0_35px_rgba(79,70,229,0.6)] active:scale-95"
+            onClick={(e) => {
+              if (loading) e.preventDefault();
+            }}
           >
-            <span>{user ? "トレーニングを開始する" : "無料で開始する"}</span>
+            <span>{loading ? "準備中..." : (user ? "トレーニングを開始する" : "無料で開始する")}</span>
             <svg
               className="w-5 h-5 ml-2 transition-transform duration-300 group-hover:translate-x-1"
               fill="none"

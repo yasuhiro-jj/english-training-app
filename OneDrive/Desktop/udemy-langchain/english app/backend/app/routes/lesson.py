@@ -1,19 +1,25 @@
-from fastapi import APIRouter, HTTPException
-from app.models.schemas import LessonGenerateRequest, LessonGenerateResponse
-from app.services import AIService, NewsService
+from fastapi import APIRouter, HTTPException, Depends
+from app.models.schemas import LessonGenerateRequest, LessonGenerateResponse, LessonOption
+from app.services import AIService, NewsService, NotionService
+from app.deps import get_current_user
 import logging
+from typing import List
 
 router = APIRouter(prefix="/lesson", tags=["lesson"])
 
 # サービスのインスタンス化
 ai_service = AIService()
 news_service = NewsService()
+notion_service = NotionService()
 
 logger = logging.getLogger(__name__)
 
 
 @router.post("/generate", response_model=LessonGenerateResponse)
-async def generate_lesson(request: LessonGenerateRequest):
+async def generate_lesson(
+    request: LessonGenerateRequest,
+    user: dict = Depends(get_current_user),
+):
     """
     Daily News Englishレッスンを生成（URL指定版）
     
@@ -49,7 +55,33 @@ async def generate_lesson(request: LessonGenerateRequest):
             )
         
         logger.info(f"レッスン生成成功: {len(lessons)}件")
-        
+
+        # 3. Notionに保存（失敗してもレスポンスは返す）
+        user_email = user.get("email", "")
+        logger.info(f"[Backend] Saving {len(lessons)} lessons to Notion...")
+        print(f"[Backend] Saving {len(lessons)} lessons to Notion...")
+
+        for lesson in lessons:
+            try:
+                if hasattr(lesson, "model_dump"):
+                    lesson_dict = lesson.model_dump()  # Pydantic v2
+                elif hasattr(lesson, "dict"):
+                    lesson_dict = lesson.dict()  # Pydantic v1
+                else:
+                    lesson_dict = lesson
+
+                lesson_title = lesson_dict.get("title", "Untitled Lesson")
+                print(f"[Backend] Saving lesson to Notion: {lesson_title}")
+                page_id = notion_service.save_lesson(lesson_dict, user_email)
+                if page_id:
+                    print(f"[Backend] ✅ Lesson saved to Notion: {lesson_title} (Page ID: {page_id})")
+                else:
+                    print(f"[Backend] ⚠️ Lesson save skipped: {lesson_title}")
+            except Exception as e:
+                lesson_title = getattr(lesson, "title", "Unknown")
+                logger.error(f"レッスンのNotion保存に失敗（処理は続行）: {lesson_title}, エラー: {str(e)}", exc_info=True)
+                print(f"[Backend] ❌ Failed to save lesson to Notion: {lesson_title}, Error: {e}")
+
         return LessonGenerateResponse(lessons=lessons)
         
     except HTTPException:
@@ -63,7 +95,7 @@ async def generate_lesson(request: LessonGenerateRequest):
 
 
 @router.get("/generate/auto", response_model=LessonGenerateResponse)
-async def generate_lesson_auto():
+async def generate_lesson_auto(user: dict = Depends(get_current_user)):
     """
     自動でニュース記事を取得してレッスンを生成（URL指定なし）
     
@@ -99,7 +131,33 @@ async def generate_lesson_auto():
             )
         
         logger.info(f"レッスン生成成功: {len(lessons)}件")
-        
+
+        # 3. Notionに保存（失敗してもレスポンスは返す）
+        user_email = user.get("email", "")
+        logger.info(f"[Backend] Saving {len(lessons)} lessons to Notion...")
+        print(f"[Backend] Saving {len(lessons)} lessons to Notion...")
+
+        for lesson in lessons:
+            try:
+                if hasattr(lesson, "model_dump"):
+                    lesson_dict = lesson.model_dump()  # Pydantic v2
+                elif hasattr(lesson, "dict"):
+                    lesson_dict = lesson.dict()  # Pydantic v1
+                else:
+                    lesson_dict = lesson
+
+                lesson_title = lesson_dict.get("title", "Untitled Lesson")
+                print(f"[Backend] Saving lesson to Notion: {lesson_title}")
+                page_id = notion_service.save_lesson(lesson_dict, user_email)
+                if page_id:
+                    print(f"[Backend] ✅ Lesson saved to Notion: {lesson_title} (Page ID: {page_id})")
+                else:
+                    print(f"[Backend] ⚠️ Lesson save skipped: {lesson_title}")
+            except Exception as e:
+                lesson_title = getattr(lesson, "title", "Unknown")
+                logger.error(f"レッスンのNotion保存に失敗（処理は続行）: {lesson_title}, エラー: {str(e)}", exc_info=True)
+                print(f"[Backend] ❌ Failed to save lesson to Notion: {lesson_title}, Error: {e}")
+
         return LessonGenerateResponse(lessons=lessons)
         
     except HTTPException:

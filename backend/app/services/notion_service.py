@@ -17,13 +17,11 @@ class NotionService:
         self.lessons_db_id = lessons_db_id_raw.replace("-", "") if lessons_db_id_raw else None
         
         # デバッグ用ログ
+        import logging
+        logger = logging.getLogger(__name__)
         if self.lessons_db_id:
-            import logging
-            logger = logging.getLogger(__name__)
             logger.info(f"NotionService initialized with lessons_db_id: {self.lessons_db_id[:20]}...")
         else:
-            import logging
-            logger = logging.getLogger(__name__)
             logger.warning("NOTION_LESSONS_DB_ID not configured")
     
     def _normalize_date(self, date_str: str) -> str:
@@ -323,7 +321,11 @@ class NotionService:
         except Exception as e:
             print(f"Error getting frequent mistakes: {e}")
             return []
+<<<<<<< HEAD
     
+=======
+
+>>>>>>> 7ade46f9a9b444a39f3f1e7288a0232826e4220e
     def save_lesson(self, lesson_data: Dict, user_email: str = "", check_duplicate: bool = True) -> str:
         """生成した記事レッスンをNotionに保存
         
@@ -348,6 +350,7 @@ class NotionService:
             # 重複チェック（同じタイトルとユーザーの記事が最近24時間以内に作成されているか）
             if check_duplicate:
                 try:
+<<<<<<< HEAD
                     # 過去24時間以内に同じタイトルの記事を検索
                     from datetime import timedelta
                     yesterday = datetime.now() - timedelta(days=1)
@@ -357,12 +360,18 @@ class NotionService:
                     yesterday = datetime.now() - timedelta(days=1)
                     
                     print(f"[Backend] [NotionService] Checking for duplicates: title='{lesson_title}', user='{user_email}', since={yesterday.isoformat()}")
+=======
+                    from datetime import timedelta
+                    yesterday = datetime.now() - timedelta(days=1)
+                    
+>>>>>>> 7ade46f9a9b444a39f3f1e7288a0232826e4220e
                     existing_pages = self.client.databases.query(
                         database_id=self.lessons_db_id,
                         filter={
                             "and": [
                                 {
                                     "property": "Title",
+<<<<<<< HEAD
                                     "title": {
                                         "equals": lesson_title
                                     }
@@ -382,10 +391,26 @@ class NotionService:
                             ]
                         },
                         page_size=1
+=======
+                                    "title": {"equals": lesson_title},
+                                },
+                                {
+                                    "property": "UserEmail",
+                                    "rich_text": {"equals": user_email},
+                                },
+                                {
+                                    "property": "Date",
+                                    "date": {"on_or_after": yesterday.isoformat()},
+                                },
+                            ]
+                        },
+                        page_size=1,
+>>>>>>> 7ade46f9a9b444a39f3f1e7288a0232826e4220e
                     )
                     
                     if existing_pages.get("results"):
                         existing_page_id = existing_pages["results"][0]["id"]
+<<<<<<< HEAD
                         print(f"[Backend] [NotionService] ⚠️ Duplicate lesson found, skipping save: {lesson_title} (Page ID: {existing_page_id})")
                         return existing_page_id
                     else:
@@ -427,6 +452,31 @@ class NotionService:
                     "select": {"name": str(lesson_data.get("level"))}
                 }
             
+=======
+                        print(f"Duplicate lesson found, skipping save: {lesson_title}")
+                        return existing_page_id
+                except Exception as e:
+                    print(f"Warning: Duplicate check failed, proceeding with save: {e}")
+            
+            import json
+            lesson_json = json.dumps(lesson_data, ensure_ascii=False)
+            
+            content_preview = lesson_data.get("content", "")
+            if len(content_preview) > 2000:
+                content_preview = content_preview[:2000]
+            
+            properties = {
+                "Title": {"title": [{"text": {"content": lesson_title}}]},
+                "Date": {"date": {"start": datetime.now().isoformat()}},
+                "UserEmail": {"rich_text": [{"text": {"content": user_email}}]},
+                "Content": {"rich_text": [{"text": {"content": content_preview}}]},
+            }
+            
+            if lesson_data.get("category"):
+                properties["Category"] = {"select": {"name": str(lesson_data.get("category"))}}
+            if lesson_data.get("level"):
+                properties["Level"] = {"select": {"name": str(lesson_data.get("level"))}}
+>>>>>>> 7ade46f9a9b444a39f3f1e7288a0232826e4220e
             if lesson_data.get("japanese_title"):
                 properties["JapaneseTitle"] = {
                     "rich_text": [{"text": {"content": str(lesson_data.get("japanese_title"))}}]
@@ -434,6 +484,7 @@ class NotionService:
             
             import logging
             logger = logging.getLogger(__name__)
+<<<<<<< HEAD
             property_keys = list(properties.keys())
             logger.info(f"Creating Notion page with properties: {property_keys}")
             logger.info(f"Database ID: {self.lessons_db_id}")
@@ -555,6 +606,67 @@ class NotionService:
             # エラーが発生しても処理を続行（記事生成は成功しているため）
             return None
     
+=======
+            logger.info(f"Creating Notion page with properties: {list(properties.keys())}")
+            logger.info(f"Database ID: {self.lessons_db_id}")
+            logger.info(f"Lesson title: {lesson_title}")
+            logger.info(f"User email: {user_email}")
+            
+            try:
+                logger.info("Calling Notion API: pages.create")
+                response = self.client.pages.create(
+                    parent={"database_id": self.lessons_db_id},
+                    properties=properties,
+                )
+                logger.info(f"Notion API response received: {response.get('id', 'NO_ID')}")
+                
+                # JSONを本文へ（長い場合は省略/切り詰め）
+                try:
+                    logger.info(f"Appending JSON to page: {response['id']}")
+                    max_chunk_size = 1900
+                    if len(lesson_json) <= max_chunk_size:
+                        payload = lesson_json
+                    else:
+                        payload = lesson_json[:max_chunk_size] + "\n... (truncated)"
+                    
+                    self.client.blocks.children.append(
+                        block_id=response["id"],
+                        children=[
+                            {
+                                "object": "block",
+                                "type": "code",
+                                "code": {
+                                    "rich_text": [{"type": "text", "text": {"content": payload}}],
+                                    "language": "json",
+                                },
+                            }
+                        ],
+                    )
+                except Exception as e:
+                    logger.warning(f"Could not append JSON to page (non-critical): {e}")
+                    print(f"Warning: Could not append JSON to page: {e}")
+                
+                logger.info(f"Lesson saved to Notion: {lesson_title} (Page ID: {response['id']})")
+                print(f"Lesson saved to Notion: {lesson_title} (Page ID: {response['id']})")
+                return response["id"]
+            except Exception as api_error:
+                error_msg = str(api_error)
+                error_type = type(api_error).__name__
+                logger.error(f"Notion API error ({error_type}): {error_msg}")
+                if hasattr(api_error, "body"):
+                    logger.error(f"Error body: {api_error.body}")
+                print(f"Error saving lesson to Notion: {error_type}: {error_msg}")
+                import traceback
+                traceback.print_exc()
+                raise
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Error saving lesson to Notion: {e}", exc_info=True)
+            print(f"Error saving lesson to Notion: {e}")
+            return None
+
+>>>>>>> 7ade46f9a9b444a39f3f1e7288a0232826e4220e
     def get_user_lessons(self, user_email: str, limit: int = 50) -> List[Dict]:
         """ユーザーの過去の記事レッスンを取得"""
         try:
@@ -563,6 +675,7 @@ class NotionService:
             
             response = self.client.databases.query(
                 database_id=self.lessons_db_id,
+<<<<<<< HEAD
                 filter={
                     "property": "UserEmail",
                     "rich_text": {
@@ -599,10 +712,26 @@ class NotionService:
                         date_value = page.get("created_time", "")
                     
                     lesson_data = {
+=======
+                filter={"property": "UserEmail", "rich_text": {"equals": user_email}},
+                sorts=[{"timestamp": "created_time", "direction": "descending"}],
+                page_size=limit,
+            )
+            
+            lessons: List[Dict] = []
+            for page in response.get("results", []):
+                props = page.get("properties", {})
+                lessons.append(
+                    {
+                        "id": page["id"],
+                        "notion_page_id": page["id"],
+                        "created_at": props.get("Date", {}).get("date", {}).get("start", ""),
+>>>>>>> 7ade46f9a9b444a39f3f1e7288a0232826e4220e
                         "title": props.get("Title", {}).get("title", [{}])[0].get("text", {}).get("content", ""),
                         "category": props.get("Category", {}).get("select", {}).get("name", ""),
                         "level": props.get("Level", {}).get("select", {}).get("name", ""),
                         "content": props.get("Content", {}).get("rich_text", [{}])[0].get("text", {}).get("content", ""),
+<<<<<<< HEAD
                         "japanese_title": props.get("JapaneseTitle", {}).get("rich_text", [{}])[0].get("text", {}).get("content", "") if props.get("JapaneseTitle", {}).get("rich_text") else "",
                         "date": date_value,
                     }
@@ -620,8 +749,20 @@ class NotionService:
                     "created_at": created_at,
                     **lesson_data
                 })
+=======
+                        "japanese_title": props.get("JapaneseTitle", {}).get("rich_text", [{}])[0].get("text", {}).get("content", "")
+                        if props.get("JapaneseTitle", {}).get("rich_text")
+                        else "",
+                        "date": props.get("Date", {}).get("date", {}).get("start", ""),
+                    }
+                )
+>>>>>>> 7ade46f9a9b444a39f3f1e7288a0232826e4220e
             
             return lessons
         except Exception as e:
             print(f"Error getting user lessons: {e}")
+<<<<<<< HEAD
             return []
+=======
+            return []
+>>>>>>> 7ade46f9a9b444a39f3f1e7288a0232826e4220e

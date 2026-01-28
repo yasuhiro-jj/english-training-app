@@ -50,21 +50,21 @@ async def generate_lessons(user: dict = Depends(get_current_user)):
             raise HTTPException(status_code=500, detail="レッスンの生成に失敗しました (AI出力空空)")
             
         print(f"[Backend] SUCCESS: Lessons generated: {len(lessons)} items")
-        
+
         # 3. 生成したレッスンをNotionに保存（各レッスンごと）
         user_email = user.get("email", "") if user else ""
         logger.info(f"Notion保存開始: ユーザー={user_email}, レッスン数={len(lessons)}")
         print(f"[Backend] Saving {len(lessons)} lessons to Notion...")
-        
+
         for lesson in lessons:
             try:
                 # ai_service.generate_english_lessonはList[Dict]を返すので、lessonは既に辞書
                 lesson_dict = lesson if isinstance(lesson, dict) else (
-                    lesson.model_dump() if hasattr(lesson, 'model_dump') else (
-                        lesson.dict() if hasattr(lesson, 'dict') else lesson
+                    lesson.model_dump() if hasattr(lesson, "model_dump") else (
+                        lesson.dict() if hasattr(lesson, "dict") else lesson
                     )
                 )
-                
+
                 lesson_title = lesson_dict.get("title", "Untitled Lesson")
                 logger.info(f"レッスンをNotionに保存開始: {lesson_title}")
                 print(f"[Backend] Saving lesson to Notion: {lesson_title}")
@@ -73,13 +73,18 @@ async def generate_lessons(user: dict = Depends(get_current_user)):
                     logger.info(f"レッスンをNotionに保存成功: {lesson_title} (Page ID: {page_id})")
                     print(f"[Backend] ✅ Lesson saved to Notion: {lesson_title} (Page ID: {page_id})")
                 else:
-                    logger.warning(f"レッスンのNotion保存がスキップされました: {lesson_title} (環境変数が設定されていない可能性があります)")
+                    logger.warning(
+                        f"レッスンのNotion保存がスキップされました: {lesson_title} (環境変数が設定されていない可能性があります)"
+                    )
                     print(f"[Backend] ⚠️ Lesson save skipped: {lesson_title}")
             except Exception as e:
                 lesson_title = lesson_dict.get("title", "Unknown") if isinstance(lesson, dict) else "Unknown"
-                logger.error(f"レッスンのNotion保存に失敗（処理は続行）: {lesson_title}, エラー: {str(e)}", exc_info=True)
+                logger.error(
+                    f"レッスンのNotion保存に失敗（処理は続行）: {lesson_title}, エラー: {str(e)}",
+                    exc_info=True,
+                )
                 print(f"[Backend] ❌ Failed to save lesson to Notion: {lesson_title}, Error: {e}")
-        
+
         return {"lessons": lessons}
         
     except HTTPException:

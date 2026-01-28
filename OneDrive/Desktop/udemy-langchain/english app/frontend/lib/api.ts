@@ -147,10 +147,9 @@ export const api = {
     },
 
     async generateLessonFromUrl(newsUrl: string): Promise<LessonGenerateResponse> {
-        const response = await fetch(`${API_URL}/lesson/generate`, {
+        const response = await authenticatedFetch(`${API_URL}/lesson/generate`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
             body: JSON.stringify({ news_url: newsUrl }),
         });
         if (!response.ok) {
@@ -252,6 +251,15 @@ export const api = {
         });
         if (!response.ok) {
             throw new Error('メッセージの送信に失敗しました');
+        }
+        return response.json();
+    },
+
+    async getLessonHistory(limit: number = 50): Promise<LessonOption[]> {
+        const response = await authenticatedFetch(`${API_URL}/lesson/history?limit=${limit}`);
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.detail || '記事履歴の取得に失敗しました');
         }
         return response.json();
     },

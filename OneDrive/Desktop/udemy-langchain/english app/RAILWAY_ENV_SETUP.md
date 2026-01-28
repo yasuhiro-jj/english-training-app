@@ -24,6 +24,16 @@ ALLOWED_ORIGINS=https://english-training-app.vercel.app,http://localhost:3000
 
 **理由**: フロントエンドのオリジンを許可する必要があります。
 
+### 3. Notion設定（重要）
+```
+NOTION_TOKEN=your_notion_integration_token
+NOTION_CONVERSATION_DB_ID=your_conversation_db_id
+NOTION_FEEDBACK_DB_ID=your_feedback_db_id
+NOTION_LESSONS_DB_ID=your_lessons_db_id
+```
+
+**理由**: レッスン生成機能を使用する場合、`NOTION_LESSONS_DB_ID`が必須です。設定されていない場合、レッスンは生成されますがNotionに保存されません。
+
 ## 確認方法
 
 1. Railwayのダッシュボードで「Variables」タブを開く

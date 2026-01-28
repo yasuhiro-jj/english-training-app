@@ -5,11 +5,13 @@ import { useAuth } from '../app/lib/auth-context';
 import { usePathname } from 'next/navigation';
 
 export default function Header() {
-    const { user, logout } = useAuth();
+    const { user, logout, loading } = useAuth();
     const pathname = usePathname();
 
     // ログイン画面やサインアップ画面ではヘッダーを非表示にする（オプション）
     if (pathname === '/login' || pathname === '/signup') return null;
+    // リロード直後のlocalStorage復元中に「ログインUI」が一瞬出るのを防ぐ
+    if (loading) return null;
 
     return (
         <header className="fixed top-0 left-0 right-0 z-50 px-6 py-4">
