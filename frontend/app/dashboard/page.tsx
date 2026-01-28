@@ -22,10 +22,13 @@ export default function DashboardPage() {
                     setStats(data);
                 } catch (err: any) {
                     console.error('[Dashboard] Error fetching stats:', err);
-                    // 401エラーの場合はログインページにリダイレクト
+                    // 401エラーの場合、authenticatedFetchで既にlocalStorageがクリアされ、
+                    // AuthContextのイベントリスナーがuserをnullに設定するため、
+                    // useRequireAuthが自動的にログインページにリダイレクトします
+                    // ここではエラーメッセージのみを設定
                     if (err.message?.includes('401') || err.message?.includes('認証')) {
-                        console.log('[Dashboard] Authentication failed, redirecting to login');
-                        router.replace('/login');
+                        console.log('[Dashboard] Authentication failed - localStorage cleared, redirect will happen automatically');
+                        // リダイレクトはuseRequireAuthが処理するので、ここでは何もしない
                         return;
                     }
                     setError('データの取得に失敗しました');
@@ -55,18 +58,71 @@ export default function DashboardPage() {
                     <p className="mt-2 text-slate-400 uppercase tracking-widest text-xs font-bold">Your Learning Dashboard</p>
                 </header>
 
-                {/* Action Card */}
-                <div className="mb-12">
+                {/* Action Cards */}
+                <div className="mb-12 grid grid-cols-1 md:grid-cols-3 gap-6">
+                    {/* Lesson Generation Card */}
+                    <div
+                        onClick={() => router.push('/lesson')}
+                        className="relative overflow-hidden bg-gradient-to-br from-emerald-600 to-teal-700 rounded-3xl p-8 shadow-2xl shadow-emerald-500/20 cursor-pointer group hover:scale-[1.02] transition-all duration-300"
+                    >
+                        <div className="relative z-10 flex flex-col gap-4">
+                            <div>
+                                <h2 className="text-2xl font-black text-white mb-2 italic">Daily News English</h2>
+                                <p className="text-emerald-100 text-sm font-medium opacity-80 uppercase tracking-widest">Generate lesson from news articles</p>
+                            </div>
+                            <div className="flex items-center">
+                                <div className="bg-white/20 backdrop-blur-md px-6 py-3 rounded-2xl border border-white/30 group-hover:bg-white/30 transition-colors">
+                                    <span className="text-white font-bold text-lg flex items-center">
+                                        レッスン生成
+                                        <svg className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M9 5l7 7-7 7" />
+                                        </svg>
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        {/* Background Decoration */}
+                        <div className="absolute -right-12 -bottom-12 w-64 h-64 bg-white/10 rounded-full blur-3xl group-hover:bg-white/20 transition-all"></div>
+                        <div className="absolute left-1/2 top-0 w-32 h-32 bg-emerald-400/20 rounded-full blur-2xl"></div>
+                    </div>
+
+                    {/* Past Lessons Card */}
+                    <div
+                        onClick={() => router.push('/lessons')}
+                        className="relative overflow-hidden bg-gradient-to-br from-blue-600 to-cyan-700 rounded-3xl p-8 shadow-2xl shadow-blue-500/20 cursor-pointer group hover:scale-[1.02] transition-all duration-300"
+                    >
+                        <div className="relative z-10 flex flex-col gap-4">
+                            <div>
+                                <h2 className="text-2xl font-black text-white mb-2 italic">過去の記事</h2>
+                                <p className="text-blue-100 text-sm font-medium opacity-80 uppercase tracking-widest">Review your past lessons</p>
+                            </div>
+                            <div className="flex items-center">
+                                <div className="bg-white/20 backdrop-blur-md px-6 py-3 rounded-2xl border border-white/30 group-hover:bg-white/30 transition-colors">
+                                    <span className="text-white font-bold text-lg flex items-center">
+                                        記事履歴
+                                        <svg className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M9 5l7 7-7 7" />
+                                        </svg>
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        {/* Background Decoration */}
+                        <div className="absolute -right-12 -bottom-12 w-64 h-64 bg-white/10 rounded-full blur-3xl group-hover:bg-white/20 transition-all"></div>
+                        <div className="absolute left-1/2 top-0 w-32 h-32 bg-blue-400/20 rounded-full blur-2xl"></div>
+                    </div>
+
+                    {/* Training Session Card */}
                     <div
                         onClick={() => router.push('/session')}
                         className="relative overflow-hidden bg-gradient-to-br from-indigo-600 to-purple-700 rounded-3xl p-8 shadow-2xl shadow-indigo-500/20 cursor-pointer group hover:scale-[1.02] transition-all duration-300"
                     >
-                        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+                        <div className="relative z-10 flex flex-col gap-4">
                             <div>
-                                <h2 className="text-3xl font-black text-white mb-2 italic">今日のレッスンを生成する</h2>
-                                <p className="text-indigo-100 text-sm font-medium opacity-80 uppercase tracking-widest">Generate your personalized daily English lesson from news</p>
+                                <h2 className="text-2xl font-black text-white mb-2 italic">トレーニング開始</h2>
+                                <p className="text-indigo-100 text-sm font-medium opacity-80 uppercase tracking-widest">Start your conversation training</p>
                             </div>
-                            <div className="flex items-center space-x-4">
+                            <div className="flex items-center">
                                 <div className="bg-white/20 backdrop-blur-md px-6 py-3 rounded-2xl border border-white/30 group-hover:bg-white/30 transition-colors">
                                     <span className="text-white font-bold text-lg flex items-center">
                                         START TRAINING

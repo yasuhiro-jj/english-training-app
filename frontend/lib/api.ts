@@ -71,8 +71,22 @@ const getAuthHeaders = (): HeadersInit => {
     };
 };
 
+/**
+ * 401エラー時に認証情報をクリアする関数
+ */
+const clearAuthOn401 = () => {
+    if (typeof window === 'undefined') return;
+    
+    console.log('[API] 401エラー検出: 認証情報をクリアします');
+    localStorage.removeItem('user_email');
+    localStorage.removeItem('auth_token');
+    
+    // AuthContextに通知するためのカスタムイベントを発火
+    window.dispatchEvent(new CustomEvent('auth:cleared'));
+};
+
 const authenticatedFetch = async (url: string, options: RequestInit = {}) => {
-    return fetch(url, {
+    const response = await fetch(url, {
         ...options,
         headers: {
             ...getAuthHeaders(),
@@ -80,6 +94,13 @@ const authenticatedFetch = async (url: string, options: RequestInit = {}) => {
         },
         credentials: 'include',
     });
+    
+    // 401エラーの場合、認証情報をクリア
+    if (response.status === 401) {
+        clearAuthOn401();
+    }
+    
+    return response;
 };
 
 export const api = {
@@ -90,6 +111,29 @@ export const api = {
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
             throw new Error(errorData.detail || 'レッスンの生成に失敗しました');
+        }
+        return response.json();
+    },
+
+    async generateLessonFromUrl(newsUrl: string): Promise<LessonGenerateResponse> {
+        const response = await authenticatedFetch(`${API_URL}/api/lesson/generate`, {
+            method: 'POST',
+            body: JSON.stringify({ news_url: newsUrl }),
+        });
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.detail || 'レッスンの生成に失敗しました');
+        }
+        return response.json();
+    },
+
+    async generateLessonAuto(): Promise<LessonGenerateResponse> {
+        const response = await authenticatedFetch(`${API_URL}/api/lesson/generate/auto`, {
+            method: 'GET',
+        });
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.detail || 'レッスンの自動生成に失敗しました');
         }
         return response.json();
     },
@@ -170,6 +214,15 @@ export const api = {
         });
         if (!response.ok) {
             throw new Error('メッセージの送信に失敗しました');
+        }
+        return response.json();
+    },
+
+    async getLessonHistory(limit: number = 50): Promise<LessonOption[]> {
+        const response = await authenticatedFetch(`${API_URL}/api/lesson/history?limit=${limit}`);
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.detail || '記事履歴の取得に失敗しました');
         }
         return response.json();
     },
