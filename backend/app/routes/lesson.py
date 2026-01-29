@@ -70,14 +70,22 @@ async def generate_lesson(
                 else:
                     lesson_dict = lesson  # 既に辞書の場合
                 
-                logger.info(f"レッスンをNotionに保存開始: {lesson.title}")
+                # lessonがdictの場合に備えて、titleを安全に取得
+                lesson_title = lesson_dict.get('title', 'Unknown') if isinstance(lesson_dict, dict) else getattr(lesson, 'title', 'Unknown')
+                
+                logger.info(f"レッスンをNotionに保存開始: {lesson_title}")
                 page_id = notion_service.save_lesson(lesson_dict, user_email)
                 if page_id:
-                    logger.info(f"レッスンをNotionに保存成功: {lesson.title} (Page ID: {page_id})")
+                    logger.info(f"レッスンをNotionに保存成功: {lesson_title} (Page ID: {page_id})")
                 else:
-                    logger.warning(f"レッスンのNotion保存がスキップされました: {lesson.title} (環境変数が設定されていない可能性があります)")
+                    logger.warning(f"レッスンのNotion保存がスキップされました: {lesson_title} (環境変数が設定されていない可能性があります)")
             except Exception as e:
-                logger.error(f"レッスンのNotion保存に失敗（処理は続行）: {lesson.title}, エラー: {str(e)}", exc_info=True)
+                # lesson_dictが定義されていない場合に備えて、lessonから直接取得を試みる
+                try:
+                    lesson_title = lesson_dict.get('title', 'Unknown') if isinstance(lesson_dict, dict) else getattr(lesson, 'title', 'Unknown')
+                except:
+                    lesson_title = lesson.get('title', 'Unknown') if isinstance(lesson, dict) else 'Unknown'
+                logger.error(f"レッスンのNotion保存に失敗（処理は続行）: {lesson_title}, エラー: {str(e)}", exc_info=True)
         
         return LessonGenerateResponse(lessons=lessons)
         
@@ -142,14 +150,22 @@ async def generate_lesson_auto(user: dict = Depends(get_current_user)):
                 else:
                     lesson_dict = lesson  # 既に辞書の場合
                 
-                logger.info(f"レッスンをNotionに保存開始: {lesson.title}")
+                # lessonがdictの場合に備えて、titleを安全に取得
+                lesson_title = lesson_dict.get('title', 'Unknown') if isinstance(lesson_dict, dict) else getattr(lesson, 'title', 'Unknown')
+                
+                logger.info(f"レッスンをNotionに保存開始: {lesson_title}")
                 page_id = notion_service.save_lesson(lesson_dict, user_email)
                 if page_id:
-                    logger.info(f"レッスンをNotionに保存成功: {lesson.title} (Page ID: {page_id})")
+                    logger.info(f"レッスンをNotionに保存成功: {lesson_title} (Page ID: {page_id})")
                 else:
-                    logger.warning(f"レッスンのNotion保存がスキップされました: {lesson.title} (環境変数が設定されていない可能性があります)")
+                    logger.warning(f"レッスンのNotion保存がスキップされました: {lesson_title} (環境変数が設定されていない可能性があります)")
             except Exception as e:
-                logger.error(f"レッスンのNotion保存に失敗（処理は続行）: {lesson.title}, エラー: {str(e)}", exc_info=True)
+                # lesson_dictが定義されていない場合に備えて、lessonから直接取得を試みる
+                try:
+                    lesson_title = lesson_dict.get('title', 'Unknown') if isinstance(lesson_dict, dict) else getattr(lesson, 'title', 'Unknown')
+                except:
+                    lesson_title = lesson.get('title', 'Unknown') if isinstance(lesson, dict) else 'Unknown'
+                logger.error(f"レッスンのNotion保存に失敗（処理は続行）: {lesson_title}, エラー: {str(e)}", exc_info=True)
         
         return LessonGenerateResponse(lessons=lessons)
         
