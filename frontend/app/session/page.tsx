@@ -25,6 +25,7 @@ function SessionPageInner() {
     
     // Read Aloud コントロール用の状態
     const [isPlaying, setIsPlaying] = useState(false);
+    const [isPaused, setIsPaused] = useState(false);
     const [currentSentenceIndex, setCurrentSentenceIndex] = useState(0);
     const [sentences, setSentences] = useState<string[]>([]);
     const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
@@ -65,6 +66,7 @@ function SessionPageInner() {
         
         window.speechSynthesis.cancel();
         setIsPlaying(true);
+        setIsPaused(false);
         setCurrentSentenceIndex(index);
 
         // 指定された文から最後までを結合して再生
@@ -77,20 +79,46 @@ function SessionPageInner() {
         
         utterance.onend = () => {
             setIsPlaying(false);
+            setIsPaused(false);
             setCurrentSentenceIndex(sentences.length);
         };
         
         utterance.onerror = () => {
             setIsPlaying(false);
+            setIsPaused(false);
         };
         
         utteranceRef.current = utterance;
         window.speechSynthesis.speak(utterance);
     };
 
+    const pauseReading = () => {
+        // speaking中のみpause（paused中はresumeへ）
+        if (!isPlaying || isPaused) return;
+        try {
+            window.speechSynthesis.pause();
+            setIsPaused(true);
+        } catch {
+            // 一部環境でpauseが未対応の場合は停止にフォールバック
+            stopReading();
+        }
+    };
+
+    const resumeReading = () => {
+        if (!isPlaying || !isPaused) return;
+        try {
+            window.speechSynthesis.resume();
+            setIsPaused(false);
+        } catch {
+            // うまくresumeできない場合は現在位置から再開
+            playFromSentence(currentSentenceIndex);
+        }
+    };
+
     const stopReading = () => {
         window.speechSynthesis.cancel();
         setIsPlaying(false);
+        setIsPaused(false);
         utteranceRef.current = null;
     };
 
@@ -113,8 +141,19 @@ function SessionPageInner() {
             const splitSentences = splitIntoSentences(textWithRomaji);
             setSentences(splitSentences);
             setCurrentSentenceIndex(0);
+            // レッスン切替時は音声を停止して状態をリセット
+            stopReading();
         }
     }, [currentLesson]);
+
+    // ページ離脱時に読み上げを停止
+    useEffect(() => {
+        return () => {
+            try {
+                window.speechSynthesis.cancel();
+            } catch {}
+        };
+    }, []);
 
     // /lesson から来た場合: sessionStorage からレッスンを復元してセッション開始
     useEffect(() => {
@@ -421,10 +460,14 @@ function SessionPageInner() {
                                         {/* 再生/停止ボタン */}
                                         <button
                                             onClick={() => {
-                                                if (isPlaying) {
-                                                    stopReading();
-                                                } else {
+                                                if (!isPlaying) {
                                                     playFromSentence(currentSentenceIndex);
+                                                    return;
+                                                }
+                                                if (isPaused) {
+                                                    resumeReading();
+                                                } else {
+                                                    pauseReading();
                                                 }
                                             }}
                                             className="flex items-center space-x-2 text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-4 py-2 rounded-full text-sm font-semibold transition"
@@ -433,9 +476,13 @@ function SessionPageInner() {
                                                 <>
                                                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z" />
+                                                        {isPaused ? (
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                                                        ) : (
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 9v6m4-6v6" />
+                                                        )}
                                                     </svg>
-                                                    <span>停止</span>
+                                                    <span>{isPaused ? '再開' : '一時停止'}</span>
                                                 </>
                                             ) : (
                                                 <>
@@ -446,6 +493,19 @@ function SessionPageInner() {
                                                     <span>Read Aloud</span>
                                                 </>
                                             )}
+                                        </button>
+
+                                        {/* 停止（リセット）ボタン */}
+                                        <button
+                                            onClick={stopReading}
+                                            disabled={!isPlaying}
+                                            className="flex items-center justify-center w-10 h-10 text-gray-600 hover:text-gray-800 bg-gray-50 hover:bg-gray-100 rounded-full text-sm font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed"
+                                            title="停止"
+                                        >
+                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z" />
+                                            </svg>
                                         </button>
                                         
                                         {/* 早送りボタン */}
