@@ -6,6 +6,7 @@ import time
 import asyncio
 import logging
 from urllib.parse import urlparse
+import xml.etree.ElementTree as ET
 
 logger = logging.getLogger(__name__)
 
@@ -254,14 +255,22 @@ class NewsService:
                 res = await client.get(rss_url, follow_redirects=True)
                 res.raise_for_status()
 
-            soup = BeautifulSoup(res.text, "lxml-xml")
-            item = soup.find("item")
-            if not item:
+            # Railway環境ではlxmlが入らないことがあるため、標準ライブラリでRSS(XML)を解析する
+            root = ET.fromstring(res.text)
+            channel = root.find("channel")
+            if channel is None:
+                return None
+            item = channel.find("item")
+            if item is None:
                 return None
 
-            title = (item.find("title").get_text(strip=True) if item.find("title") else "NHK News")
-            link = (item.find("link").get_text(strip=True) if item.find("link") else "")
-            desc = (item.find("description").get_text(strip=True) if item.find("description") else "")
+            def _txt(tag: str) -> str:
+                el = item.find(tag)
+                return (el.text or "").strip() if el is not None else ""
+
+            title = _txt("title") or "NHK News"
+            link = _txt("link")
+            desc = _txt("description")
 
             if link:
                 article = await self.scrape_article(link)
@@ -288,14 +297,22 @@ class NewsService:
                 res = await client.get(rss_url, follow_redirects=True)
                 res.raise_for_status()
 
-            soup = BeautifulSoup(res.text, "lxml-xml")
-            item = soup.find("item")
-            if not item:
+            # Railway環境ではlxmlが入らないことがあるため、標準ライブラリでRSS(XML)を解析する
+            root = ET.fromstring(res.text)
+            channel = root.find("channel")
+            if channel is None:
+                return None
+            item = channel.find("item")
+            if item is None:
                 return None
 
-            title = (item.find("title").get_text(strip=True) if item.find("title") else "BBC News")
-            link = (item.find("link").get_text(strip=True) if item.find("link") else "")
-            desc = (item.find("description").get_text(strip=True) if item.find("description") else "")
+            def _txt(tag: str) -> str:
+                el = item.find(tag)
+                return (el.text or "").strip() if el is not None else ""
+
+            title = _txt("title") or "BBC News"
+            link = _txt("link")
+            desc = _txt("description")
 
             if link:
                 article = await self.scrape_article(link)
