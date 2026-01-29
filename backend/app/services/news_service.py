@@ -254,7 +254,7 @@ class NewsService:
                 res = await client.get(rss_url, follow_redirects=True)
                 res.raise_for_status()
 
-            soup = BeautifulSoup(res.text, "xml")
+            soup = BeautifulSoup(res.text, "lxml-xml")
             item = soup.find("item")
             if not item:
                 return None
@@ -288,7 +288,7 @@ class NewsService:
                 res = await client.get(rss_url, follow_redirects=True)
                 res.raise_for_status()
 
-            soup = BeautifulSoup(res.text, "xml")
+            soup = BeautifulSoup(res.text, "lxml-xml")
             item = soup.find("item")
             if not item:
                 return None
