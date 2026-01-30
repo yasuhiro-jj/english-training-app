@@ -146,8 +146,10 @@ function SessionPageInner() {
         setCurrentSentenceIndex(index);
 
         // 指定された文から最後までを結合して再生
+        // NOTE: ローマ字変換 + 長文結合はモバイルで重くなりやすい。
+        // まずは原文を読み上げる（必要なら「現在の1文のみ」+変換に変更する）。
         const textToSpeak = sentences.slice(index).join(' ');
-        const textWithRomaji = convertJapaneseNamesInText(textToSpeak);
+        const textWithRomaji = textToSpeak;
         
         const UtteranceCtor = (typeof window !== 'undefined' ? (window as any).SpeechSynthesisUtterance : null);
         if (!UtteranceCtor) {
@@ -236,8 +238,9 @@ function SessionPageInner() {
     // レッスンが変更されたら文を分割
     useEffect(() => {
         if (currentLesson?.content) {
-            const textWithRomaji = convertJapaneseNamesInText(currentLesson.content);
-            const splitSentences = splitIntoSentences(textWithRomaji);
+            // NOTE: 本文全体のローマ字変換はモバイルでUIフリーズしやすい。
+            // 読み上げ時に必要なら短い範囲で変換する。
+            const splitSentences = splitIntoSentences(currentLesson.content);
             setSentences(splitSentences);
             setCurrentSentenceIndex(0);
             // レッスン切替時は音声を停止して状態をリセット
@@ -248,9 +251,7 @@ function SessionPageInner() {
     // ページ離脱時に読み上げを停止
     useEffect(() => {
         return () => {
-            try {
-                window.speechSynthesis.cancel();
-            } catch {}
+            safeCancelSpeech();
         };
     }, []);
 

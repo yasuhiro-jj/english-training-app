@@ -352,14 +352,20 @@ export function convertJapaneseNamesInText(text: string): string {
     result = result.replace(japaneseRegex, (match) => {
         // 日本語部分をローマ字に変換
         const romaji = convertJapaneseToRomaji(match);
-        console.log(`[Romaji] Converting "${match}" → "${romaji}"`);
+        // NOTE: モバイルでは大量ログがUIフリーズの原因になるため、常時ログは出さない
+        if (process.env.NODE_ENV === 'development') {
+            // eslint-disable-next-line no-console
+            console.debug(`[Romaji] Converting "${match}" → "${romaji}"`);
+        }
         // スペースを追加して単語として認識されやすくする
         return ` ${romaji} `;
     }).replace(/\s+/g, ' ').trim(); // 余分なスペースを整理
     
-    if (result !== text) {
-        console.log(`[Romaji] Original: "${text.substring(0, 100)}..."`);
-        console.log(`[Romaji] Converted: "${result.substring(0, 100)}..."`);
+    if (process.env.NODE_ENV === 'development' && result !== text) {
+        // eslint-disable-next-line no-console
+        console.debug(`[Romaji] Original: "${text.substring(0, 100)}..."`);
+        // eslint-disable-next-line no-console
+        console.debug(`[Romaji] Converted: "${result.substring(0, 100)}..."`);
     }
     
     return result;
