@@ -176,7 +176,14 @@ export default function AudioRecorder({ onTranscriptChange, onDurationChange }: 
                 if (event.error === 'not-allowed') {
                     setIsRecording(false);
                     isRecordingRef.current = false;
-                    setStatusMsg('マイク権限エラー（Chromeのサイト設定でマイクを許可してください）');
+                    void (async () => {
+                        const p = await getMicrophonePermissionState();
+                        setStatusMsg(
+                            p === 'denied'
+                                ? 'マイク権限が「ブロック」されています（Chromeのサイト設定でマイクを許可→再読み込み）'
+                                : '音声認識が拒否されました（Chromeのサイト設定/OSのマイク権限をご確認ください）'
+                        );
+                    })();
                     // NOTE: alert はモバイルで固まりやすいので使わない
                     stopAudioMonitoring();
                     if (timerRef.current) {
@@ -354,6 +361,13 @@ export default function AudioRecorder({ onTranscriptChange, onDurationChange }: 
         }
         if (!supportsSpeechRecognition()) {
             setStatusMsg('音声認識が未対応です。下のテキスト入力をご利用ください。');
+            return;
+        }
+
+        // 事前に「ブロック」状態を検知できる環境では早めに案内する
+        const permState = await getMicrophonePermissionState();
+        if (permState === 'denied') {
+            setStatusMsg('マイク権限が「ブロック」されています（Chromeのサイト設定でマイクを許可→再読み込み）');
             return;
         }
 
