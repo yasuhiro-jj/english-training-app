@@ -94,6 +94,18 @@ function SessionPageInner() {
     const [sentences, setSentences] = useState<string[]>([]);
     const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
 
+    const safeCancelSpeech = () => {
+        try {
+            // 一部モバイル/ブラウザでspeechSynthesisが未実装 or 例外になることがある
+            const synth = (typeof window !== 'undefined' ? (window as any).speechSynthesis : null);
+            if (synth && typeof synth.cancel === 'function') {
+                synth.cancel();
+            }
+        } catch (e) {
+            console.warn('[Session] speechSynthesis.cancel failed:', e);
+        }
+    };
+
     useEffect(() => {
         console.log('[Session] Page Mounted');
     }, []);
@@ -128,7 +140,7 @@ function SessionPageInner() {
     const playFromSentence = (index: number) => {
         if (!currentLesson || sentences.length === 0) return;
         
-        window.speechSynthesis.cancel();
+        safeCancelSpeech();
         setIsPlaying(true);
         setIsPaused(false);
         setCurrentSentenceIndex(index);
@@ -137,7 +149,15 @@ function SessionPageInner() {
         const textToSpeak = sentences.slice(index).join(' ');
         const textWithRomaji = convertJapaneseNamesInText(textToSpeak);
         
-        const utterance = new SpeechSynthesisUtterance(textWithRomaji);
+        const UtteranceCtor = (typeof window !== 'undefined' ? (window as any).SpeechSynthesisUtterance : null);
+        if (!UtteranceCtor) {
+            console.warn('[Session] SpeechSynthesisUtterance is not available in this browser');
+            setIsPlaying(false);
+            setIsPaused(false);
+            return;
+        }
+
+        const utterance = new UtteranceCtor(textWithRomaji) as SpeechSynthesisUtterance;
         utterance.lang = 'en-US';
         utterance.rate = 0.9;
         
@@ -153,14 +173,28 @@ function SessionPageInner() {
         };
         
         utteranceRef.current = utterance;
-        window.speechSynthesis.speak(utterance);
+        try {
+            const synth = (typeof window !== 'undefined' ? (window as any).speechSynthesis : null);
+            if (synth && typeof synth.speak === 'function') {
+                synth.speak(utterance);
+            } else {
+                console.warn('[Session] speechSynthesis.speak is not available in this browser');
+                setIsPlaying(false);
+                setIsPaused(false);
+            }
+        } catch (e) {
+            console.warn('[Session] speechSynthesis.speak failed:', e);
+            setIsPlaying(false);
+            setIsPaused(false);
+        }
     };
 
     const pauseReading = () => {
         // speaking中のみpause（paused中はresumeへ）
         if (!isPlaying || isPaused) return;
         try {
-            window.speechSynthesis.pause();
+            const synth = (typeof window !== 'undefined' ? (window as any).speechSynthesis : null);
+            if (synth && typeof synth.pause === 'function') synth.pause();
             setIsPaused(true);
         } catch {
             // 一部環境でpauseが未対応の場合は停止にフォールバック
@@ -171,7 +205,8 @@ function SessionPageInner() {
     const resumeReading = () => {
         if (!isPlaying || !isPaused) return;
         try {
-            window.speechSynthesis.resume();
+            const synth = (typeof window !== 'undefined' ? (window as any).speechSynthesis : null);
+            if (synth && typeof synth.resume === 'function') synth.resume();
             setIsPaused(false);
         } catch {
             // うまくresumeできない場合は現在位置から再開
@@ -180,7 +215,7 @@ function SessionPageInner() {
     };
 
     const stopReading = () => {
-        window.speechSynthesis.cancel();
+        safeCancelSpeech();
         setIsPlaying(false);
         setIsPaused(false);
         utteranceRef.current = null;
