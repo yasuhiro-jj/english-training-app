@@ -30,6 +30,9 @@ export default function AudioRecorder({ onTranscriptChange, onDurationChange }: 
     const streamRef = useRef<MediaStream | null>(null);
     const animationFrameRef = useRef<number | null>(null);
     const debugEnabledRef = useRef(false);
+    const lastFinalRef = useRef<string>('');
+    const lastInterimRef = useRef<string>('');
+    const lastOnResultLogAtRef = useRef<number>(0);
 
     const isDev = process.env.NODE_ENV === 'development';
 
@@ -179,6 +182,15 @@ export default function AudioRecorder({ onTranscriptChange, onDurationChange }: 
             }
 
             const finalText = fullFinal.trim();
+            // 同じ内容なら更新しない（Androidでイベントが多いため）
+            const prevFinal = lastFinalRef.current;
+            const prevInterim = lastInterimRef.current;
+            if (finalText === prevFinal && currentInterim === prevInterim) {
+                return;
+            }
+            lastFinalRef.current = finalText;
+            lastInterimRef.current = currentInterim;
+
             setInterimTranscript(currentInterim);
             if (currentInterim || finalText) {
                 setMicWarning(false);
@@ -190,12 +202,20 @@ export default function AudioRecorder({ onTranscriptChange, onDurationChange }: 
                 setTimeout(() => onTranscriptChangeRef.current(finalText), 0);
             }
 
-            logEvent('SpeechRecognition onresult', {
-                resultIndex: event.resultIndex,
-                resultsLength: event.results?.length,
-                finalLen: finalText.length,
-                interimLen: currentInterim.length,
-            });
+            // デバッグログは出しすぎると見づらいので間引く（最大1秒に1回＋finalが伸びた時）
+            const now = Date.now();
+            const shouldLog =
+                finalText.length !== prevFinal.length &&
+                (now - lastOnResultLogAtRef.current > 1000 || lastOnResultLogAtRef.current === 0);
+            if (shouldLog) {
+                lastOnResultLogAtRef.current = now;
+                logEvent('SpeechRecognition onresult', {
+                    resultIndex: event.resultIndex,
+                    resultsLength: event.results?.length,
+                    finalLen: finalText.length,
+                    interimLen: currentInterim.length,
+                });
+            }
         };
 
         rec.onstart = () => {
