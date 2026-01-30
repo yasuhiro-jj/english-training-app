@@ -29,6 +29,7 @@ export default function AudioRecorder({ onTranscriptChange, onDurationChange }: 
     const analyserRef = useRef<AnalyserNode | null>(null);
     const streamRef = useRef<MediaStream | null>(null);
     const animationFrameRef = useRef<number | null>(null);
+    const debugEnabledRef = useRef(false);
 
     const isDev = process.env.NODE_ENV === 'development';
 
@@ -41,7 +42,8 @@ export default function AudioRecorder({ onTranscriptChange, onDurationChange }: 
     }
 
     const logEvent = (message: string, data?: unknown) => {
-        if (!debugEnabled && !isDev) return;
+        // NOTE: ハンドラが古いクロージャを掴んでもログできるようにref参照にする
+        if (!debugEnabledRef.current && !isDev) return;
         const ts = new Date().toISOString();
         const payload = data === undefined ? '' : ` ${safeStringify(data)}`;
         const line = `[${ts}] ${message}${payload}`;
@@ -61,8 +63,10 @@ export default function AudioRecorder({ onTranscriptChange, onDurationChange }: 
                 params.get('debug') === 'true' ||
                 localStorage.getItem('dne_debug') === '1';
             setDebugEnabled(Boolean(enabled));
+            debugEnabledRef.current = Boolean(enabled);
         } catch {
             setDebugEnabled(false);
+            debugEnabledRef.current = false;
         }
     }, []);
 
@@ -159,33 +163,40 @@ export default function AudioRecorder({ onTranscriptChange, onDurationChange }: 
 
     const attachRecognitionHandlers = (rec: any) => {
         rec.onresult = (event: any) => {
-                let finalTranscriptChunk = '';
-                let currentInterim = '';
+            // Android Chrome の SpeechRecognition は同じ確定文を繰り返し返すことがあるため、
+            // 「差分を足す」ではなく「event.results から確定文を再構築」して重複を防ぐ。
+            let fullFinal = '';
+            let currentInterim = '';
 
-                for (let i = event.resultIndex; i < event.results.length; i++) {
-                    const transcript = event.results[i][0].transcript;
-                    if (event.results[i].isFinal) {
-                        finalTranscriptChunk += transcript + ' ';
-                    } else {
-                        currentInterim += transcript;
-                    }
+            for (let i = 0; i < event.results.length; i++) {
+                const t = event.results[i][0]?.transcript || '';
+                if (event.results[i].isFinal) {
+                    fullFinal += t + ' ';
+                } else if (i >= event.resultIndex) {
+                    // 直近のinterimのみ反映
+                    currentInterim += t;
                 }
+            }
 
-                setInterimTranscript(currentInterim);
-                if (currentInterim || finalTranscriptChunk) {
-                    setMicWarning(false);
-                    setStatusMsg('音声を収集中...');
-                }
+            const finalText = fullFinal.trim();
+            setInterimTranscript(currentInterim);
+            if (currentInterim || finalText) {
+                setMicWarning(false);
+                setStatusMsg('音声を収集中...');
+            }
 
-                if (finalTranscriptChunk) {
-                    if (isDev) console.log('Final transcript chunk detected:', finalTranscriptChunk);
-                    setTranscript((prev) => {
-                        const newTranscript = prev + finalTranscriptChunk;
-                        setTimeout(() => onTranscriptChangeRef.current(newTranscript), 0);
-                        return newTranscript;
-                    });
-                }
-            };
+            if (finalText) {
+                setTranscript(finalText);
+                setTimeout(() => onTranscriptChangeRef.current(finalText), 0);
+            }
+
+            logEvent('SpeechRecognition onresult', {
+                resultIndex: event.resultIndex,
+                resultsLength: event.results?.length,
+                finalLen: finalText.length,
+                interimLen: currentInterim.length,
+            });
+        };
 
         rec.onstart = () => {
                 if (isDev) console.log('Speech recognition engine ONSTART');
