@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useEffect, useState } from 'react';
+import { Suspense, useEffect, useState, useRef } from 'react';
 import { api, LessonOption } from '@/lib/api';
 import AudioRecorder from '@/components/AudioRecorder';
 import { useSearchParams } from 'next/navigation';
@@ -18,6 +18,119 @@ function SessionPageInner() {
     const [analysisResult, setAnalysisResult] = useState<any | null>(null);
     const [lessons, setLessons] = useState<LessonOption[]>([]);
     const [isGenerating, setIsGenerating] = useState(false);
+    
+    // Read Aloud コントロール用の状態
+    const [isPlaying, setIsPlaying] = useState(false);
+    const [currentSentenceIndex, setCurrentSentenceIndex] = useState(0);
+    const [sentences, setSentences] = useState<string[]>([]);
+    const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+
+    // テキストを文単位で分割する関数
+    const splitIntoSentences = (text: string): string[] => {
+        // 文末記号（. ! ?）で分割
+        const sentenceEndings = /([.!?]+)\s+/g;
+        const sentences: string[] = [];
+        let lastIndex = 0;
+        let match;
+        
+        while ((match = sentenceEndings.exec(text)) !== null) {
+            const sentence = text.substring(lastIndex, match.index + match[1].length).trim();
+            if (sentence.length > 0) {
+                sentences.push(sentence);
+            }
+            lastIndex = match.index + match[0].length;
+        }
+        
+        // 残りのテキストを追加
+        const remaining = text.substring(lastIndex).trim();
+        if (remaining.length > 0) {
+            sentences.push(remaining);
+        }
+        
+        return sentences.length > 0 ? sentences : [text];
+    };
+
+    // Read Aloud コントロール関数
+    const playFromSentence = (index: number) => {
+        if (!currentLesson || sentences.length === 0) return;
+        
+        // SpeechSynthesis APIの存在チェック（モバイルデバイス対応）
+        if (typeof window === 'undefined' || !window.speechSynthesis) {
+            setError('音声読み上げ機能はお使いのデバイスではサポートされていません。');
+            setIsPlaying(false);
+            return;
+        }
+        
+        try {
+            window.speechSynthesis.cancel();
+            setIsPlaying(true);
+            setCurrentSentenceIndex(index);
+
+            // 指定された文から最後までを結合して再生
+            const textToSpeak = sentences.slice(index).join(' ');
+            const utterance = new SpeechSynthesisUtterance(textToSpeak);
+            utterance.lang = 'en-US';
+            utterance.rate = 0.9;
+            
+            utterance.onend = () => {
+                setIsPlaying(false);
+                setCurrentSentenceIndex(sentences.length);
+            };
+            
+            utterance.onerror = (event) => {
+                console.error('Speech synthesis error:', event);
+                setIsPlaying(false);
+                setError('音声読み上げ中にエラーが発生しました。もう一度お試しください。');
+            };
+            
+            utteranceRef.current = utterance;
+            window.speechSynthesis.speak(utterance);
+        } catch (err: any) {
+            console.error('Error in playFromSentence:', err);
+            setIsPlaying(false);
+            setError('音声読み上げ機能の起動に失敗しました。お使いのブラウザが音声読み上げをサポートしていない可能性があります。');
+        }
+    };
+
+    const stopReading = () => {
+        // SpeechSynthesis APIの存在チェック（モバイルデバイス対応）
+        if (typeof window === 'undefined' || !window.speechSynthesis) {
+            setIsPlaying(false);
+            utteranceRef.current = null;
+            return;
+        }
+        
+        try {
+            window.speechSynthesis.cancel();
+            setIsPlaying(false);
+            utteranceRef.current = null;
+        } catch (err: any) {
+            console.error('Error in stopReading:', err);
+            setIsPlaying(false);
+            utteranceRef.current = null;
+        }
+    };
+
+    const rewindSentence = () => {
+        if (currentSentenceIndex > 0) {
+            playFromSentence(Math.max(0, currentSentenceIndex - 1));
+        }
+    };
+
+    const forwardSentence = () => {
+        if (currentSentenceIndex < sentences.length - 1) {
+            playFromSentence(currentSentenceIndex + 1);
+        }
+    };
+
+    // レッスンが変更されたら文を分割
+    useEffect(() => {
+        if (currentLesson?.content) {
+            const splitSentences = splitIntoSentences(currentLesson.content);
+            setSentences(splitSentences);
+            setCurrentSentenceIndex(0);
+        }
+    }, [currentLesson]);
 
     // If navigated from /lesson, auto-start session with provided lesson JSON
     useEffect(() => {
@@ -288,24 +401,61 @@ function SessionPageInner() {
                             <div>
                                 <div className="flex justify-between items-center mb-4">
                                     <h2 className="text-xl font-bold text-gray-800 border-l-4 border-indigo-500 pl-3">Article</h2>
-                                    <button
-                                        onClick={() => {
-                                            if (window.speechSynthesis.speaking) {
-                                                window.speechSynthesis.cancel();
-                                            } else {
-                                                const utterance = new SpeechSynthesisUtterance(currentLesson.content);
-                                                utterance.lang = 'en-US';
-                                                utterance.rate = 0.9; // Slightly slower for clarity
-                                                window.speechSynthesis.speak(utterance);
-                                            }
-                                        }}
-                                        className="flex items-center space-x-2 text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-3 py-1 rounded-full text-sm font-semibold transition"
-                                    >
-                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
-                                        </svg>
-                                        <span>Read Aloud</span>
-                                    </button>
+                                    <div className="flex items-center gap-2">
+                                        {/* 巻き戻しボタン */}
+                                        <button
+                                            onClick={rewindSentence}
+                                            disabled={!isPlaying && currentSentenceIndex === 0}
+                                            className="flex items-center justify-center w-10 h-10 text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 rounded-full text-sm font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed"
+                                            title="巻き戻し"
+                                        >
+                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12.066 11.2a1 1 0 000 1.6l5.334 4A1 1 0 0019 16V8a1 1 0 00-1.6-.8l-5.334 4zM4.066 11.2a1 1 0 000 1.6l5.334 4A1 1 0 0011 16V8a1 1 0 00-1.6-.8l-5.334 4z" />
+                                            </svg>
+                                        </button>
+                                        
+                                        {/* 再生/停止ボタン */}
+                                        <button
+                                            onClick={() => {
+                                                if (isPlaying) {
+                                                    stopReading();
+                                                } else {
+                                                    playFromSentence(currentSentenceIndex);
+                                                }
+                                            }}
+                                            className="flex items-center space-x-2 text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-4 py-2 rounded-full text-sm font-semibold transition"
+                                        >
+                                            {isPlaying ? (
+                                                <>
+                                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z" />
+                                                    </svg>
+                                                    <span>停止</span>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                    </svg>
+                                                    <span>Read Aloud</span>
+                                                </>
+                                            )}
+                                        </button>
+                                        
+                                        {/* 早送りボタン */}
+                                        <button
+                                            onClick={forwardSentence}
+                                            disabled={!isPlaying && currentSentenceIndex >= sentences.length - 1}
+                                            className="flex items-center justify-center w-10 h-10 text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 rounded-full text-sm font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed"
+                                            title="早送り"
+                                        >
+                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.933 12.8a1 1 0 000-1.6l-5.333-4A1 1 0 005 8v8a1 1 0 001.6.8l5.333-4zM19.933 12.8a1 1 0 000-1.6l-5.333-4A1 1 0 0013 8v8a1 1 0 001.6.8l5.333-4z" />
+                                            </svg>
+                                        </button>
+                                    </div>
                                 </div>
                                 <div className="prose max-w-none text-gray-800 leading-relaxed whitespace-pre-wrap font-serif text-lg">
                                     {currentLesson.content}
