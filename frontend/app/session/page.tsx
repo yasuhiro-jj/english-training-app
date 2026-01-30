@@ -7,6 +7,70 @@ import AudioRecorder from '../../components/AudioRecorder';
 import { useRequireAuth } from '../lib/hooks/useRequireAuth';
 import { convertJapaneseNamesInText } from '../../lib/japaneseToRomaji';
 
+function normalizeString(value: unknown): string {
+    return typeof value === 'string' ? value : '';
+}
+
+function normalizeStringArray(value: unknown): string[] {
+    return Array.isArray(value) ? value.filter((v): v is string => typeof v === 'string') : [];
+}
+
+function normalizeVocabulary(value: unknown): LessonOption['vocabulary'] {
+    if (!Array.isArray(value)) return [];
+    return value
+        .filter((v) => v && typeof v === 'object')
+        .map((v: any) => ({
+            word: normalizeString(v.word),
+            pronunciation: normalizeString(v.pronunciation),
+            type: normalizeString(v.type),
+            definition: normalizeString(v.definition),
+            example: normalizeString(v.example),
+        }))
+        .filter((v) => v.word || v.definition);
+}
+
+function normalizeLesson(raw: unknown): LessonOption {
+    const r: any = raw && typeof raw === 'object' ? raw : {};
+    return {
+        title: normalizeString(r.title),
+        date: normalizeString(r.date),
+        category: normalizeString(r.category),
+        vocabulary: normalizeVocabulary(r.vocabulary),
+        content: normalizeString(r.content),
+        discussion_a: normalizeStringArray(r.discussion_a),
+        discussion_b: normalizeStringArray(r.discussion_b),
+        question: normalizeString(r.question),
+        level: normalizeString(r.level),
+        japanese_title: normalizeString(r.japanese_title),
+    };
+}
+
+function safeGetStorageItem(key: string): string | null {
+    try {
+        return sessionStorage.getItem(key);
+    } catch {
+        // iOS/Safari private mode 等で sessionStorage が例外になることがある
+        try {
+            return localStorage.getItem(key);
+        } catch {
+            return null;
+        }
+    }
+}
+
+function safeRemoveStorageItem(key: string) {
+    try {
+        sessionStorage.removeItem(key);
+    } catch {
+        // ignore
+    }
+    try {
+        localStorage.removeItem(key);
+    } catch {
+        // ignore
+    }
+}
+
 function SessionPageInner() {
     const { user, loading: authLoading } = useRequireAuth();
     const searchParams = useSearchParams();
@@ -166,9 +230,9 @@ function SessionPageInner() {
 
                 // 1) 推奨: sessionStorage 経由
                 if (from === 'lesson') {
-                    const stored = sessionStorage.getItem('selected_lesson');
+                    const stored = safeGetStorageItem('selected_lesson');
                     if (stored) {
-                        lessonData = JSON.parse(stored);
+                        lessonData = normalizeLesson(JSON.parse(stored));
                     }
                 }
 
@@ -177,7 +241,7 @@ function SessionPageInner() {
                     const lessonParam = searchParams.get('lesson');
                     if (lessonParam) {
                         // URLSearchParamsは基本デコード済みなのでdecodeURIComponentしない
-                        lessonData = JSON.parse(lessonParam);
+                        lessonData = normalizeLesson(JSON.parse(lessonParam));
                     }
                 }
 
@@ -195,7 +259,7 @@ function SessionPageInner() {
 
                 // セッション開始まで成功したら、保存データを消す
                 if (from === 'lesson') {
-                    sessionStorage.removeItem('selected_lesson');
+                    safeRemoveStorageItem('selected_lesson');
                 }
 
                 setHasProcessedLesson(true);
@@ -252,7 +316,7 @@ function SessionPageInner() {
         try {
             const response = await api.generateLessons();
             console.log('[Session] handleGenerate success:', response);
-            setLessons(response.lessons);
+            setLessons((response.lessons || []).map((l) => normalizeLesson(l)));
             setStep('selection');
         } catch (err: any) {
             console.error('[Session] handleGenerate error:', err);
@@ -268,16 +332,20 @@ function SessionPageInner() {
             setError('');
             // セッション開始中の状態が分かるように一時的に analyzing を使う
             setStep('analyzing');
+            const normalizedLesson = normalizeLesson(lesson);
             // LessonOptionをapi.startSessionが期待する形式に変換
             const customContent = {
-                title: lesson.title,
-                content: lesson.content,
-                question: lesson.question || (lesson.discussion_a && lesson.discussion_a[0]) || 'What are your thoughts on this article?'
+                title: normalizedLesson.title,
+                content: normalizedLesson.content,
+                question:
+                    normalizedLesson.question ||
+                    (Array.isArray(normalizedLesson.discussion_a) ? normalizedLesson.discussion_a[0] : undefined) ||
+                    'What are your thoughts on this article?'
             };
             
             const response = await api.startSession(undefined, customContent);
             setSessionId(response.session_id);
-            setCurrentLesson(lesson);
+            setCurrentLesson(normalizedLesson);
             setStep('learning');
         } catch (err: any) {
             console.error('[Session] handleSelectLesson error:', err);
@@ -420,7 +488,7 @@ function SessionPageInner() {
                             </div>
 
                             {/* Unlocking Word Meanings */}
-                            {currentLesson.vocabulary && currentLesson.vocabulary.length > 0 && (
+                            {Array.isArray(currentLesson.vocabulary) && currentLesson.vocabulary.length > 0 && (
                                 <div className="bg-gray-50 rounded-lg p-6 border border-gray-200">
                                     <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-center">
                                         <svg className="w-5 h-5 mr-2 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
@@ -533,7 +601,7 @@ function SessionPageInner() {
                                 <div className="mb-6">
                                     <h3 className="font-bold text-indigo-700 mb-2">Discussion A</h3>
                                     <ul className="list-disc list-inside space-y-2 text-gray-800">
-                                        {currentLesson.discussion_a && currentLesson.discussion_a.map((q, i) => (
+                                        {Array.isArray(currentLesson.discussion_a) && currentLesson.discussion_a.map((q, i) => (
                                             <li key={i}>{q}</li>
                                         ))}
                                     </ul>
@@ -542,7 +610,7 @@ function SessionPageInner() {
                                 <div>
                                     <h3 className="font-bold text-indigo-700 mb-2">Discussion B</h3>
                                     <ul className="list-disc list-inside space-y-2 text-gray-800">
-                                        {currentLesson.discussion_b && currentLesson.discussion_b.map((q, i) => (
+                                        {Array.isArray(currentLesson.discussion_b) && currentLesson.discussion_b.map((q, i) => (
                                             <li key={i}>{q}</li>
                                         ))}
                                     </ul>
