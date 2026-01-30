@@ -193,6 +193,18 @@ export default function AudioRecorder({ onTranscriptChange, onDurationChange }: 
                     setInterimTranscript('');
                     return;
                 }
+                if (event.error === 'audio-capture') {
+                    setIsRecording(false);
+                    isRecordingRef.current = false;
+                    setStatusMsg('マイク入力を開始できませんでした（他アプリがマイク使用中の可能性）');
+                    stopAudioMonitoring();
+                    if (timerRef.current) {
+                        clearInterval(timerRef.current);
+                        timerRef.current = null;
+                    }
+                    setInterimTranscript('');
+                    return;
+                }
                 if (event.error === 'service-not-allowed') {
                     setIsRecording(false);
                     isRecordingRef.current = false;
@@ -373,15 +385,11 @@ export default function AudioRecorder({ onTranscriptChange, onDurationChange }: 
 
         if (isDev) console.log('Starting recording sequence...');
 
-        // Ensure AudioContext starts on user interaction
-        const micOk = await startAudioMonitoring(true);
-        if (!micOk) {
-            isStartingRef.current = false;
-            isRecordingRef.current = false;
-            setIsRecording(false);
-            return;
-        }
-        // ここまで来たら「マイク自体」はOK。以降で not-allowed が出るなら SpeechRecognition 側が原因の可能性が高い。
+        // NOTE:
+        // Android/Chromeでは getUserMedia（マイク取得）と SpeechRecognition が同時にマイクを取り合い、
+        // SpeechRecognition が無反応になることがある。
+        // まずは SpeechRecognition 単体で開始し、音量モニタ(getUserMedia)は録音中は使わない。
+        stopAudioMonitoring();
 
         if (!recognitionRef.current) {
             if (isDev) console.warn('Recognition service not initialized');
@@ -420,7 +428,6 @@ export default function AudioRecorder({ onTranscriptChange, onDurationChange }: 
                 // 失敗時は固まらないように後片付け
                 isRecordingRef.current = false;
                 setIsRecording(false);
-                stopAudioMonitoring();
             }
 
             // タイマー開始
