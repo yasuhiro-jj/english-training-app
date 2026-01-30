@@ -18,6 +18,8 @@ export default function AudioRecorder({ onTranscriptChange, onDurationChange }: 
     const [statusMsg, setStatusMsg] = useState('待機中');
     const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
     const [selectedDeviceId, setSelectedDeviceId] = useState<string>('');
+    const [debugEnabled, setDebugEnabled] = useState(false);
+    const [debugLogs, setDebugLogs] = useState<string[]>([]);
 
     const recognitionRef = useRef<any>(null);
     const timerRef = useRef<NodeJS.Timeout | null>(null);
@@ -29,6 +31,40 @@ export default function AudioRecorder({ onTranscriptChange, onDurationChange }: 
     const animationFrameRef = useRef<number | null>(null);
 
     const isDev = process.env.NODE_ENV === 'development';
+
+    function safeStringify(value: unknown): string {
+        try {
+            return JSON.stringify(value);
+        } catch {
+            return String(value);
+        }
+    }
+
+    const logEvent = (message: string, data?: unknown) => {
+        if (!debugEnabled && !isDev) return;
+        const ts = new Date().toISOString();
+        const payload = data === undefined ? '' : ` ${safeStringify(data)}`;
+        const line = `[${ts}] ${message}${payload}`;
+        if (isDev) console.log(line);
+        setDebugLogs((prev) => {
+            const next = [...prev, line];
+            return next.length > 200 ? next.slice(next.length - 200) : next;
+        });
+    };
+
+    useEffect(() => {
+        // スマホでも原因特定できるように ?debug=1 でログを表示
+        try {
+            const params = new URLSearchParams(window.location.search);
+            const enabled =
+                params.get('debug') === '1' ||
+                params.get('debug') === 'true' ||
+                localStorage.getItem('dne_debug') === '1';
+            setDebugEnabled(Boolean(enabled));
+        } catch {
+            setDebugEnabled(false);
+        }
+    }, []);
 
     const getSpeechRecognitionCtor = () => {
         if (typeof window === 'undefined') return null;
@@ -165,10 +201,12 @@ export default function AudioRecorder({ onTranscriptChange, onDurationChange }: 
                 if (isDev) console.log('Speech recognition engine ONSTART');
                 setStatusMsg('聞き取り中...');
                 isStartingRef.current = false;
+                logEvent('SpeechRecognition onstart');
             };
 
             recognitionRef.current.onerror = (event: any) => {
                 if (isDev) console.error('Speech recognition error event:', event.error);
+                logEvent('SpeechRecognition onerror', { error: event.error });
                 if (event.error === 'no-speech' || event.error === 'aborted') {
                     // Ignore these and let onend handle restart
                     return;
@@ -183,6 +221,7 @@ export default function AudioRecorder({ onTranscriptChange, onDurationChange }: 
                                 ? 'マイク権限が「ブロック」されています（Chromeのサイト設定でマイクを許可→再読み込み）'
                                 : '音声認識が拒否されました（Chromeのサイト設定/OSのマイク権限をご確認ください）'
                         );
+                        logEvent('SpeechRecognition denied', { permissionState: p });
                     })();
                     // NOTE: alert はモバイルで固まりやすいので使わない
                     stopAudioMonitoring();
@@ -197,6 +236,7 @@ export default function AudioRecorder({ onTranscriptChange, onDurationChange }: 
                     setIsRecording(false);
                     isRecordingRef.current = false;
                     setStatusMsg('マイク入力を開始できませんでした（他アプリがマイク使用中の可能性）');
+                    logEvent('SpeechRecognition audio-capture');
                     stopAudioMonitoring();
                     if (timerRef.current) {
                         clearInterval(timerRef.current);
@@ -262,6 +302,7 @@ export default function AudioRecorder({ onTranscriptChange, onDurationChange }: 
         try {
             if (!supportsGetUserMedia()) {
                 setStatusMsg('このブラウザはマイク入力に未対応です');
+                logEvent('getUserMedia unsupported');
                 return false;
             }
 
@@ -272,6 +313,7 @@ export default function AudioRecorder({ onTranscriptChange, onDurationChange }: 
             };
             const stream = await navigator.mediaDevices.getUserMedia(constraints);
             if (isDev) console.log('Microphone access granted. Stream:', stream.id, 'Active:', stream.active);
+            logEvent('getUserMedia success', { active: stream.active });
             streamRef.current = stream;
 
             const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
@@ -331,6 +373,7 @@ export default function AudioRecorder({ onTranscriptChange, onDurationChange }: 
         } catch (err) {
             const name = getDomExceptionName(err);
             if (isDev) console.error('Error accessing microphone:', err, 'name:', name);
+            logEvent('getUserMedia failed', { name, err: String(err) });
             if (name === 'NotAllowedError' || name === 'PermissionDeniedError') {
                 const perm = await getMicrophonePermissionState();
                 setStatusMsg(
@@ -380,10 +423,12 @@ export default function AudioRecorder({ onTranscriptChange, onDurationChange }: 
         const permState = await getMicrophonePermissionState();
         if (permState === 'denied') {
             setStatusMsg('マイク権限が「ブロック」されています（Chromeのサイト設定でマイクを許可→再読み込み）');
+            logEvent('permission precheck denied');
             return;
         }
 
         if (isDev) console.log('Starting recording sequence...');
+        logEvent('startRecording clicked', { permState });
 
         // NOTE:
         // Android/Chromeでは getUserMedia（マイク取得）と SpeechRecognition が同時にマイクを取り合い、
@@ -419,6 +464,7 @@ export default function AudioRecorder({ onTranscriptChange, onDurationChange }: 
             } catch (e) {
                 const name = getDomExceptionName(e);
                 if (isDev) console.error('Initial start error:', e);
+                logEvent('SpeechRecognition start() threw', { name, err: String(e) });
                 isStartingRef.current = false;
                 if (name === 'NotAllowedError' || name === 'PermissionDeniedError') {
                     setStatusMsg('音声認識が拒否されました（Chromeのサイト設定/OSのマイク権限をご確認ください）');
@@ -494,6 +540,53 @@ export default function AudioRecorder({ onTranscriptChange, onDurationChange }: 
                         </span>
                     </div>
                 </div>
+
+                {debugEnabled && (
+                    <div className="flex flex-col gap-2 pt-2">
+                        <div className="flex flex-wrap gap-2">
+                            <button
+                                type="button"
+                                onClick={async () => {
+                                    logEvent('re-request mic clicked');
+                                    const ok = await startAudioMonitoring(true);
+                                    stopAudioMonitoring();
+                                    logEvent('re-request mic finished', { ok });
+                                }}
+                                className="px-3 py-2 rounded-lg border border-gray-200 text-xs font-bold text-gray-700 hover:bg-gray-50"
+                            >
+                                マイク許可ポップアップを出す（デバッグ）
+                            </button>
+                            <button
+                                type="button"
+                                onClick={async () => {
+                                    const text = debugLogs.join('\n');
+                                    try {
+                                        await navigator.clipboard.writeText(text);
+                                        logEvent('debug log copied');
+                                    } catch (e) {
+                                        logEvent('debug log copy failed', e);
+                                    }
+                                }}
+                                className="px-3 py-2 rounded-lg border border-gray-200 text-xs font-bold text-gray-700 hover:bg-gray-50"
+                            >
+                                ログをコピー
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setDebugLogs([])}
+                                className="px-3 py-2 rounded-lg border border-gray-200 text-xs font-bold text-gray-700 hover:bg-gray-50"
+                            >
+                                ログをクリア
+                            </button>
+                        </div>
+                        <pre className="text-[10px] leading-snug bg-gray-50 border border-gray-200 rounded-lg p-3 max-h-48 overflow-auto whitespace-pre-wrap">
+{debugLogs.join('\n') || '(no logs)'}
+                        </pre>
+                        <p className="text-[10px] text-gray-500">
+                            デバッグ表示: URLに <code>?debug=1</code> を付けて開いてください。
+                        </p>
+                    </div>
+                )}
 
                 <div className="flex flex-col space-y-1">
                     <span className="text-xs font-semibold text-gray-500">使用するマイク:</span>
