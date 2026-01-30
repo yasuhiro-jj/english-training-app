@@ -28,6 +28,20 @@ export default function AudioRecorder({ onTranscriptChange, onDurationChange }: 
     const streamRef = useRef<MediaStream | null>(null);
     const animationFrameRef = useRef<number | null>(null);
 
+    const isDev = process.env.NODE_ENV === 'development';
+
+    const getSpeechRecognitionCtor = () => {
+        if (typeof window === 'undefined') return null;
+        return (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition || null;
+    };
+
+    const supportsSpeechRecognition = () => !!getSpeechRecognitionCtor();
+
+    const supportsGetUserMedia = () =>
+        typeof navigator !== 'undefined' &&
+        !!navigator.mediaDevices &&
+        typeof navigator.mediaDevices.getUserMedia === 'function';
+
     // デバイス一覧の取得
     const refreshDevices = async () => {
         try {
@@ -39,14 +53,15 @@ export default function AudioRecorder({ onTranscriptChange, onDurationChange }: 
                 setSelectedDeviceId(audioIn[0].deviceId);
             }
         } catch (e) {
-            console.error('Error listing devices:', e);
+            if (isDev) console.error('Error listing devices:', e);
         }
     };
 
     // 初期化時にマイクチェックを開始 & デバイス取得
     useEffect(() => {
         refreshDevices();
-        startAudioMonitoring(false);
+        // NOTE: モバイルではユーザー操作なしの getUserMedia() がブロックされるため、
+        // ここでマイク取得はしない（録音開始ボタン押下時に初めて起動する）
         return () => stopAudioMonitoring();
     }, []);
 
@@ -89,10 +104,10 @@ export default function AudioRecorder({ onTranscriptChange, onDurationChange }: 
 
     useEffect(() => {
         // Web Speech API の初期化
-        const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+        const SpeechRecognition = getSpeechRecognitionCtor();
 
         if (typeof window !== 'undefined' && SpeechRecognition) {
-            console.log('Initializing SpeechRecognition engine for lang:', lang);
+            if (isDev) console.log('Initializing SpeechRecognition engine for lang:', lang);
             recognitionRef.current = new SpeechRecognition();
             recognitionRef.current.continuous = true;
             recognitionRef.current.interimResults = true;
@@ -118,7 +133,7 @@ export default function AudioRecorder({ onTranscriptChange, onDurationChange }: 
                 }
 
                 if (finalTranscriptChunk) {
-                    console.log('Final transcript chunk detected:', finalTranscriptChunk);
+                    if (isDev) console.log('Final transcript chunk detected:', finalTranscriptChunk);
                     setTranscript((prev) => {
                         const newTranscript = prev + finalTranscriptChunk;
                         setTimeout(() => onTranscriptChangeRef.current(newTranscript), 0);
@@ -128,13 +143,13 @@ export default function AudioRecorder({ onTranscriptChange, onDurationChange }: 
             };
 
             recognitionRef.current.onstart = () => {
-                console.log('Speech recognition engine ONSTART');
+                if (isDev) console.log('Speech recognition engine ONSTART');
                 setStatusMsg('聞き取り中...');
                 isStartingRef.current = false;
             };
 
             recognitionRef.current.onerror = (event: any) => {
-                console.error('Speech recognition error event:', event.error);
+                if (isDev) console.error('Speech recognition error event:', event.error);
                 if (event.error === 'no-speech' || event.error === 'aborted') {
                     // Ignore these and let onend handle restart
                     return;
@@ -143,22 +158,22 @@ export default function AudioRecorder({ onTranscriptChange, onDurationChange }: 
                     setIsRecording(false);
                     isRecordingRef.current = false;
                     setStatusMsg('マイク権限エラー');
-                    alert('マイクへのアクセスを許可してください');
+                    // NOTE: alert はモバイルで固まりやすいので使わない
                 }
             };
 
             recognitionRef.current.onend = () => {
-                console.log('Speech recognition engine ONEND');
+                if (isDev) console.log('Speech recognition engine ONEND');
                 if (isRecordingRef.current) {
                     // Persistent restart logic (300ms delay for stability)
                     setTimeout(() => {
                         try {
                             if (isRecordingRef.current) {
                                 recognitionRef.current.start();
-                                console.log('Recognition restarted successfully');
+                                if (isDev) console.log('Recognition restarted successfully');
                             }
                         } catch (e) {
-                            console.log('Recognition restart attempt failed:', e);
+                            if (isDev) console.log('Recognition restart attempt failed:', e);
                         }
                     }, 300);
                 } else {
@@ -168,7 +183,7 @@ export default function AudioRecorder({ onTranscriptChange, onDurationChange }: 
         }
 
         return () => {
-            console.log('Cleaning up SpeechRecognition engine');
+            if (isDev) console.log('Cleaning up SpeechRecognition engine');
             if (recognitionRef.current) {
                 try {
                     recognitionRef.current.onresult = null;
@@ -185,28 +200,34 @@ export default function AudioRecorder({ onTranscriptChange, onDurationChange }: 
         if (streamRef.current && !force) {
             if (audioContextRef.current?.state === 'suspended') {
                 await audioContextRef.current.resume();
-                console.log('AudioContext resumed from suspended state (non-force start)');
+                if (isDev) console.log('AudioContext resumed from suspended state (non-force start)');
             }
             return;
         }
 
         try {
-            console.log('Requesting microphone access with deviceId:', selectedDeviceId);
+            if (!supportsGetUserMedia()) {
+                setStatusMsg('このブラウザはマイク入力に未対応です');
+                return;
+            }
+
+            if (isDev) console.log('Requesting microphone access with deviceId:', selectedDeviceId);
             const constraints = {
-                audio: selectedDeviceId ? { deviceId: { exact: selectedDeviceId } } : true
+                // exact は端末によって失敗しやすいので ideal にする
+                audio: selectedDeviceId ? { deviceId: { ideal: selectedDeviceId } } : true
             };
             const stream = await navigator.mediaDevices.getUserMedia(constraints);
-            console.log('Microphone access granted. Stream:', stream.id, 'Active:', stream.active);
+            if (isDev) console.log('Microphone access granted. Stream:', stream.id, 'Active:', stream.active);
             streamRef.current = stream;
 
             const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
             const audioContext = new AudioContextClass();
             audioContextRef.current = audioContext;
-            console.log('AudioContext created. State:', audioContext.state);
+            if (isDev) console.log('AudioContext created. State:', audioContext.state);
 
             if (audioContext.state === 'suspended') {
                 await audioContext.resume();
-                console.log('AudioContext resumed. New state:', audioContext.state);
+                if (isDev) console.log('AudioContext resumed. New state:', audioContext.state);
             }
 
             const analyser = audioContext.createAnalyser();
@@ -234,9 +255,9 @@ export default function AudioRecorder({ onTranscriptChange, onDurationChange }: 
                 const now = Date.now();
                 if (now - lastLogTime > 1000) {
                     if (average < 0.2) {
-                        console.log('Audio level TOO LOW:', average.toFixed(2));
+                        if (isDev) console.log('Audio level TOO LOW:', average.toFixed(2));
                     } else {
-                        console.log('Current audio level (avg):', average.toFixed(2));
+                        if (isDev) console.log('Current audio level (avg):', average.toFixed(2));
                     }
                     lastLogTime = now;
                 }
@@ -246,17 +267,23 @@ export default function AudioRecorder({ onTranscriptChange, onDurationChange }: 
                 } else if (average < 0.1 && isRecordingRef.current) {
                     setMicWarning(true); // 低すぎる場合に警告
                 }
+
+                animationFrameRef.current = requestAnimationFrame(checkVolume);
             };
 
+            if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
             checkVolume();
         } catch (err) {
-            console.error('Error accessing microphone:', err);
+            if (isDev) console.error('Error accessing microphone:', err);
             setStatusMsg('マイクアクセスエラー');
         }
     };
 
     const stopAudioMonitoring = () => {
-        if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
+        if (animationFrameRef.current) {
+            cancelAnimationFrame(animationFrameRef.current);
+            animationFrameRef.current = null;
+        }
         if (streamRef.current) {
             streamRef.current.getTracks().forEach(track => track.stop());
             streamRef.current = null;
@@ -269,14 +296,24 @@ export default function AudioRecorder({ onTranscriptChange, onDurationChange }: 
     };
 
     const startRecording = async () => {
-        console.log('Starting recording sequence...');
+        if (isStartingRef.current) return;
+        if (!supportsGetUserMedia()) {
+            setStatusMsg('このブラウザは録音に未対応です（getUserMedia不可）');
+            return;
+        }
+        if (!supportsSpeechRecognition()) {
+            setStatusMsg('音声認識が未対応です。下のテキスト入力をご利用ください。');
+            return;
+        }
+
+        if (isDev) console.log('Starting recording sequence...');
 
         // Ensure AudioContext starts on user interaction
         await startAudioMonitoring(true);
 
         if (!recognitionRef.current) {
-            console.warn('Recognition service not initialized');
-            const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+            if (isDev) console.warn('Recognition service not initialized');
+            const SpeechRecognition = getSpeechRecognitionCtor();
             if (SpeechRecognition) {
                 recognitionRef.current = new SpeechRecognition();
                 recognitionRef.current.continuous = true;
@@ -297,11 +334,12 @@ export default function AudioRecorder({ onTranscriptChange, onDurationChange }: 
             setStatusMsg('起動中...');
 
             try {
-                console.log('Calling recognitionRef.current.start()');
+                if (isDev) console.log('Calling recognitionRef.current.start()');
                 recognitionRef.current.start();
             } catch (e) {
-                console.error('Initial start error:', e);
+                if (isDev) console.error('Initial start error:', e);
                 isStartingRef.current = false;
+                setStatusMsg('音声認識の起動に失敗しました');
             }
 
             // タイマー開始
@@ -320,7 +358,7 @@ export default function AudioRecorder({ onTranscriptChange, onDurationChange }: 
     }, [duration, onDurationChange]);
 
     const stopRecording = () => {
-        console.log('Stopping recording sequence...');
+        if (isDev) console.log('Stopping recording sequence...');
         isRecordingRef.current = false;
         setIsRecording(false);
         stopAudioMonitoring();
