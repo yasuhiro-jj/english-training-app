@@ -6,6 +6,44 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useRequireAuth } from '../lib/hooks/useRequireAuth';
 
+function normalizeString(value: unknown): string {
+  return typeof value === 'string' ? value : '';
+}
+
+function normalizeStringArray(value: unknown): string[] {
+  return Array.isArray(value) ? value.filter((v): v is string => typeof v === 'string') : [];
+}
+
+function normalizeVocabulary(value: unknown): LessonOption['vocabulary'] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter((v) => v && typeof v === 'object')
+    .map((v: any) => ({
+      word: normalizeString(v.word),
+      pronunciation: normalizeString(v.pronunciation),
+      type: normalizeString(v.type),
+      definition: normalizeString(v.definition),
+      example: normalizeString(v.example),
+    }))
+    .filter((v) => v.word || v.definition);
+}
+
+function normalizeLesson(raw: unknown): LessonOption {
+  const r: any = raw && typeof raw === 'object' ? raw : {};
+  return {
+    title: normalizeString(r.title),
+    date: normalizeString(r.date),
+    category: normalizeString(r.category),
+    vocabulary: normalizeVocabulary(r.vocabulary),
+    content: normalizeString(r.content),
+    discussion_a: normalizeStringArray(r.discussion_a),
+    discussion_b: normalizeStringArray(r.discussion_b),
+    question: normalizeString(r.question),
+    level: normalizeString(r.level),
+    japanese_title: normalizeString(r.japanese_title),
+  };
+}
+
 export default function LessonPage() {
   const { user, loading: authLoading } = useRequireAuth();
   const router = useRouter();
@@ -28,7 +66,7 @@ export default function LessonPage() {
       const response = await api.generateLessonFromUrl(newsUrl);
       
       if (response.lessons && response.lessons.length > 0) {
-        setLesson(response.lessons[0]);
+        setLesson(normalizeLesson(response.lessons[0]));
       } else {
         throw new Error('レッスンが生成されませんでした');
       }
@@ -49,7 +87,7 @@ export default function LessonPage() {
       const response = await api.generateLessonAuto();
       
       if (response.lessons && response.lessons.length > 0) {
-        setLesson(response.lessons[0]);
+        setLesson(normalizeLesson(response.lessons[0]));
       } else {
         throw new Error('レッスンが生成されませんでした');
       }
@@ -208,7 +246,7 @@ export default function LessonPage() {
             </div>
 
             {/* Vocabulary */}
-            {lesson.vocabulary && lesson.vocabulary.length > 0 && (
+            {Array.isArray(lesson.vocabulary) && lesson.vocabulary.length > 0 && (
               <div className="p-6 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-xl">
                 <h3 className="text-xl font-bold text-white mb-4 flex items-center">
                   <svg className="w-5 h-5 mr-2 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -250,7 +288,8 @@ export default function LessonPage() {
             </div>
 
             {/* Discussion Questions */}
-            {(lesson.discussion_a || lesson.discussion_b) && (
+            {(Array.isArray(lesson.discussion_a) && lesson.discussion_a.length > 0) ||
+            (Array.isArray(lesson.discussion_b) && lesson.discussion_b.length > 0) ? (
               <div className="p-6 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-xl">
                 <h3 className="text-xl font-bold text-white mb-4 flex items-center">
                   <svg className="w-5 h-5 mr-2 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -259,7 +298,7 @@ export default function LessonPage() {
                   Viewpoint Discussion
                 </h3>
                 
-                {lesson.discussion_a && lesson.discussion_a.length > 0 && (
+                {Array.isArray(lesson.discussion_a) && lesson.discussion_a.length > 0 && (
                   <div className="mb-6">
                     <h4 className="text-lg font-semibold text-indigo-300 mb-3">Discussion A</h4>
                     <ul className="space-y-2">
@@ -273,7 +312,7 @@ export default function LessonPage() {
                   </div>
                 )}
 
-                {lesson.discussion_b && lesson.discussion_b.length > 0 && (
+                {Array.isArray(lesson.discussion_b) && lesson.discussion_b.length > 0 && (
                   <div>
                     <h4 className="text-lg font-semibold text-indigo-300 mb-3">Discussion B</h4>
                     <ul className="space-y-2">
@@ -287,7 +326,7 @@ export default function LessonPage() {
                   </div>
                 )}
               </div>
-            )}
+            ) : null}
 
             {/* Action Button */}
             <div className="pt-6">
