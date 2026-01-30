@@ -49,6 +49,18 @@ export default function AudioRecorder({ onTranscriptChange, onDurationChange }: 
         return '';
     };
 
+    const getMicrophonePermissionState = async (): Promise<string | null> => {
+        try {
+            const perms: any = (navigator as any).permissions;
+            if (!perms?.query) return null;
+            // TSのPermissionNameは環境差があるので any で扱う
+            const res = await perms.query({ name: 'microphone' });
+            return res?.state ?? null; // 'granted' | 'denied' | 'prompt'
+        } catch {
+            return null;
+        }
+    };
+
     // デバイス一覧の取得
     const refreshDevices = async () => {
         try {
@@ -301,7 +313,12 @@ export default function AudioRecorder({ onTranscriptChange, onDurationChange }: 
             const name = getDomExceptionName(err);
             if (isDev) console.error('Error accessing microphone:', err, 'name:', name);
             if (name === 'NotAllowedError' || name === 'PermissionDeniedError') {
-                setStatusMsg('マイク権限が拒否されました（Chromeのサイト設定でマイクを許可してください）');
+                const perm = await getMicrophonePermissionState();
+                setStatusMsg(
+                    perm === 'denied'
+                        ? 'マイク権限が「ブロック」されています（Chromeのサイト設定でマイクを許可してください）'
+                        : 'マイク権限が拒否されました（Chromeのサイト設定でマイクを許可してください）'
+                );
             } else if (name === 'NotFoundError' || name === 'DevicesNotFoundError') {
                 setStatusMsg('マイクが見つかりません（端末のマイク設定をご確認ください）');
             } else if (name === 'NotReadableError' || name === 'TrackStartError') {
@@ -350,6 +367,7 @@ export default function AudioRecorder({ onTranscriptChange, onDurationChange }: 
             setIsRecording(false);
             return;
         }
+        // ここまで来たら「マイク自体」はOK。以降で not-allowed が出るなら SpeechRecognition 側が原因の可能性が高い。
 
         if (!recognitionRef.current) {
             if (isDev) console.warn('Recognition service not initialized');
@@ -377,9 +395,18 @@ export default function AudioRecorder({ onTranscriptChange, onDurationChange }: 
                 if (isDev) console.log('Calling recognitionRef.current.start()');
                 recognitionRef.current.start();
             } catch (e) {
+                const name = getDomExceptionName(e);
                 if (isDev) console.error('Initial start error:', e);
                 isStartingRef.current = false;
-                setStatusMsg('音声認識の起動に失敗しました');
+                if (name === 'NotAllowedError' || name === 'PermissionDeniedError') {
+                    setStatusMsg('音声認識が拒否されました（Chromeのサイト設定/OSのマイク権限をご確認ください）');
+                } else {
+                    setStatusMsg('音声認識の起動に失敗しました');
+                }
+                // 失敗時は固まらないように後片付け
+                isRecordingRef.current = false;
+                setIsRecording(false);
+                stopAudioMonitoring();
             }
 
             // タイマー開始
