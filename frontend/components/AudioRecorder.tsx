@@ -157,18 +157,8 @@ export default function AudioRecorder({ onTranscriptChange, onDurationChange }: 
         prevLangRef.current = lang;
     }, [lang]);
 
-    useEffect(() => {
-        // Web Speech API の初期化
-        const SpeechRecognition = getSpeechRecognitionCtor();
-
-        if (typeof window !== 'undefined' && SpeechRecognition) {
-            if (isDev) console.log('Initializing SpeechRecognition engine for lang:', lang);
-            recognitionRef.current = new SpeechRecognition();
-            recognitionRef.current.continuous = true;
-            recognitionRef.current.interimResults = true;
-            recognitionRef.current.lang = lang;
-
-            recognitionRef.current.onresult = (event: any) => {
+    const attachRecognitionHandlers = (rec: any) => {
+        rec.onresult = (event: any) => {
                 let finalTranscriptChunk = '';
                 let currentInterim = '';
 
@@ -197,14 +187,14 @@ export default function AudioRecorder({ onTranscriptChange, onDurationChange }: 
                 }
             };
 
-            recognitionRef.current.onstart = () => {
+        rec.onstart = () => {
                 if (isDev) console.log('Speech recognition engine ONSTART');
                 setStatusMsg('聞き取り中...');
                 isStartingRef.current = false;
                 logEvent('SpeechRecognition onstart');
             };
 
-            recognitionRef.current.onerror = (event: any) => {
+        rec.onerror = (event: any) => {
                 if (isDev) console.error('Speech recognition error event:', event.error);
                 logEvent('SpeechRecognition onerror', { error: event.error });
                 if (event.error === 'no-speech' || event.error === 'aborted') {
@@ -256,14 +246,14 @@ export default function AudioRecorder({ onTranscriptChange, onDurationChange }: 
                 }
             };
 
-            recognitionRef.current.onend = () => {
+        rec.onend = () => {
                 if (isDev) console.log('Speech recognition engine ONEND');
                 if (isRecordingRef.current) {
                     // Persistent restart logic (300ms delay for stability)
                     setTimeout(() => {
                         try {
                             if (isRecordingRef.current) {
-                                recognitionRef.current.start();
+                                rec.start();
                                 if (isDev) console.log('Recognition restarted successfully');
                             }
                         } catch (e) {
@@ -274,7 +264,33 @@ export default function AudioRecorder({ onTranscriptChange, onDurationChange }: 
                     setStatusMsg('待機中');
                 }
             };
+    };
+
+    const ensureRecognition = (): any | null => {
+        const SpeechRecognition = getSpeechRecognitionCtor();
+        if (typeof window === 'undefined' || !SpeechRecognition) return null;
+
+        // 既存インスタンスがあれば再利用。ただしハンドラが無い（＝競合生成）場合は付け直す
+        if (recognitionRef.current) {
+            if (!recognitionRef.current.onstart || !recognitionRef.current.onerror || !recognitionRef.current.onend) {
+                attachRecognitionHandlers(recognitionRef.current);
+            }
+            return recognitionRef.current;
         }
+
+        if (isDev) console.log('Creating SpeechRecognition instance for lang:', lang);
+        const rec = new SpeechRecognition();
+        rec.continuous = true;
+        rec.interimResults = true;
+        rec.lang = lang;
+        attachRecognitionHandlers(rec);
+        recognitionRef.current = rec;
+        return rec;
+    };
+
+    useEffect(() => {
+        // Web Speech API の初期化（可能なら先に作っておく）
+        ensureRecognition();
 
         return () => {
             if (isDev) console.log('Cleaning up SpeechRecognition engine');
@@ -436,20 +452,8 @@ export default function AudioRecorder({ onTranscriptChange, onDurationChange }: 
         // まずは SpeechRecognition 単体で開始し、音量モニタ(getUserMedia)は録音中は使わない。
         stopAudioMonitoring();
 
-        if (!recognitionRef.current) {
-            if (isDev) console.warn('Recognition service not initialized');
-            const SpeechRecognition = getSpeechRecognitionCtor();
-            if (SpeechRecognition) {
-                recognitionRef.current = new SpeechRecognition();
-                recognitionRef.current.continuous = true;
-                recognitionRef.current.interimResults = true;
-                recognitionRef.current.lang = lang;
-                // Need to re-attach handlers here if we want it to work instantly, 
-                // but ideally it should be initialized in useEffect.
-            }
-        }
-
-        if (recognitionRef.current) {
+        const rec = ensureRecognition();
+        if (rec) {
             setTranscript('');
             setInterimTranscript('');
             setDuration(0);
@@ -460,7 +464,7 @@ export default function AudioRecorder({ onTranscriptChange, onDurationChange }: 
 
             try {
                 if (isDev) console.log('Calling recognitionRef.current.start()');
-                recognitionRef.current.start();
+                rec.start();
             } catch (e) {
                 const name = getDomExceptionName(e);
                 if (isDev) console.error('Initial start error:', e);
@@ -474,13 +478,29 @@ export default function AudioRecorder({ onTranscriptChange, onDurationChange }: 
                 // 失敗時は固まらないように後片付け
                 isRecordingRef.current = false;
                 setIsRecording(false);
+                return;
             }
+
+            // onstart が来ない場合のタイムアウト（Androidで無反応になるケース対策）
+            setTimeout(() => {
+                if (!isRecordingRef.current) return;
+                if (isStartingRef.current) {
+                    logEvent('SpeechRecognition start timeout');
+                    isStartingRef.current = false;
+                    isRecordingRef.current = false;
+                    setIsRecording(false);
+                    setStatusMsg('音声認識が開始しませんでした（端末/Chromeの音声入力制限の可能性）。下のテキスト入力をご利用ください。');
+                }
+            }, 5000);
 
             // タイマー開始
             if (timerRef.current) clearInterval(timerRef.current);
             timerRef.current = setInterval(() => {
                 setDuration((prev) => prev + 1);
             }, 1000);
+        } else {
+            setStatusMsg('音声認識が未対応です。下のテキスト入力をご利用ください。');
+            logEvent('SpeechRecognition ctor missing');
         }
     };
 
