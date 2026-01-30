@@ -244,7 +244,7 @@ export default function AudioRecorder({ onTranscriptChange, onDurationChange }: 
                 await audioContextRef.current.resume();
                 if (isDev) console.log('AudioContext resumed from suspended state (non-force start)');
             }
-            return;
+            return true;
         }
 
         try {
