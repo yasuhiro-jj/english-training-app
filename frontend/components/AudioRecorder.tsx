@@ -42,6 +42,13 @@ export default function AudioRecorder({ onTranscriptChange, onDurationChange }: 
         !!navigator.mediaDevices &&
         typeof navigator.mediaDevices.getUserMedia === 'function';
 
+    const getDomExceptionName = (err: unknown): string => {
+        if (err && typeof err === 'object' && 'name' in err && typeof (err as any).name === 'string') {
+            return (err as any).name;
+        }
+        return '';
+    };
+
     // デバイス一覧の取得
     const refreshDevices = async () => {
         try {
@@ -157,8 +164,24 @@ export default function AudioRecorder({ onTranscriptChange, onDurationChange }: 
                 if (event.error === 'not-allowed') {
                     setIsRecording(false);
                     isRecordingRef.current = false;
-                    setStatusMsg('マイク権限エラー');
+                    setStatusMsg('マイク権限エラー（Chromeのサイト設定でマイクを許可してください）');
                     // NOTE: alert はモバイルで固まりやすいので使わない
+                    stopAudioMonitoring();
+                    if (timerRef.current) {
+                        clearInterval(timerRef.current);
+                        timerRef.current = null;
+                    }
+                    setInterimTranscript('');
+                    return;
+                }
+                if (event.error === 'service-not-allowed') {
+                    setIsRecording(false);
+                    isRecordingRef.current = false;
+                    setStatusMsg('音声認識がブロックされました（端末/ポリシー設定をご確認ください）');
+                    return;
+                }
+                if (event.error === 'network') {
+                    setStatusMsg('音声認識のネットワークエラー（通信状況をご確認ください）');
                 }
             };
 
@@ -196,7 +219,7 @@ export default function AudioRecorder({ onTranscriptChange, onDurationChange }: 
         };
     }, [lang]);
 
-    const startAudioMonitoring = async (force: boolean = true) => {
+    const startAudioMonitoring = async (force: boolean = true): Promise<boolean> => {
         if (streamRef.current && !force) {
             if (audioContextRef.current?.state === 'suspended') {
                 await audioContextRef.current.resume();
@@ -208,7 +231,7 @@ export default function AudioRecorder({ onTranscriptChange, onDurationChange }: 
         try {
             if (!supportsGetUserMedia()) {
                 setStatusMsg('このブラウザはマイク入力に未対応です');
-                return;
+                return false;
             }
 
             if (isDev) console.log('Requesting microphone access with deviceId:', selectedDeviceId);
@@ -273,9 +296,20 @@ export default function AudioRecorder({ onTranscriptChange, onDurationChange }: 
 
             if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
             checkVolume();
+            return true;
         } catch (err) {
-            if (isDev) console.error('Error accessing microphone:', err);
-            setStatusMsg('マイクアクセスエラー');
+            const name = getDomExceptionName(err);
+            if (isDev) console.error('Error accessing microphone:', err, 'name:', name);
+            if (name === 'NotAllowedError' || name === 'PermissionDeniedError') {
+                setStatusMsg('マイク権限が拒否されました（Chromeのサイト設定でマイクを許可してください）');
+            } else if (name === 'NotFoundError' || name === 'DevicesNotFoundError') {
+                setStatusMsg('マイクが見つかりません（端末のマイク設定をご確認ください）');
+            } else if (name === 'NotReadableError' || name === 'TrackStartError') {
+                setStatusMsg('マイクを使用できません（他アプリが使用中の可能性）');
+            } else {
+                setStatusMsg('マイクアクセスエラー');
+            }
+            return false;
         }
     };
 
@@ -309,7 +343,13 @@ export default function AudioRecorder({ onTranscriptChange, onDurationChange }: 
         if (isDev) console.log('Starting recording sequence...');
 
         // Ensure AudioContext starts on user interaction
-        await startAudioMonitoring(true);
+        const micOk = await startAudioMonitoring(true);
+        if (!micOk) {
+            isStartingRef.current = false;
+            isRecordingRef.current = false;
+            setIsRecording(false);
+            return;
+        }
 
         if (!recognitionRef.current) {
             if (isDev) console.warn('Recognition service not initialized');
