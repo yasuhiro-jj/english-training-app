@@ -81,3 +81,18 @@ class LessonGenerateRequest(BaseModel):
 class LessonGenerateResponse(BaseModel):
     lessons: list[LessonOption]
 
+
+class WhisperTranscribeRequest(BaseModel):
+    """Whisper文字起こしリクエスト"""
+    audio_data: str  # base64エンコードされた音声データ
+    session_id: str
+    duration_seconds: int
+
+
+class WhisperTranscribeResponse(BaseModel):
+    """Whisper文字起こしレスポンス"""
+    transcript: str
+    duration_seconds: float  # Whisperが検出した実際の音声長
+    usage_minutes: float  # 今回の使用分数（課金計算用）
+    remaining_minutes: Optional[float] = None  # 残り分数（無料体験の場合）
+
