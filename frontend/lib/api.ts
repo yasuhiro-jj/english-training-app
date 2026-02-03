@@ -226,4 +226,25 @@ export const api = {
         }
         return response.json();
     },
+
+    async transcribeWithWhisper(
+        audioBase64: string,
+        sessionId: string,
+        durationSeconds: number
+    ): Promise<{ transcript: string; remaining_minutes?: number }> {
+        const response = await authenticatedFetch(`${API_URL}/api/whisper/transcribe`, {
+            method: 'POST',
+            body: JSON.stringify({
+                audio_data: audioBase64,
+                session_id: sessionId,
+                duration_seconds: durationSeconds,
+            }),
+        });
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            const errorMessage = errorData.detail || '文字起こしに失敗しました';
+            throw new Error(errorMessage);
+        }
+        return response.json();
+    },
 };

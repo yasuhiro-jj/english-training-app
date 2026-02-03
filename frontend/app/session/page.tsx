@@ -699,6 +699,7 @@ function SessionPageInner() {
                             <AudioRecorder
                                 onTranscriptChange={setTranscript}
                                 onDurationChange={setDuration}
+                                sessionId={sessionId}
                             />
                             <div className="flex flex-col gap-3">
                                 <button
