@@ -910,24 +910,25 @@ export default function AudioRecorder({ onTranscriptChange, onDurationChange, se
     };
 
     return (
-        <div className="space-y-4 bg-white p-6 rounded-2xl border border-gray-100 shadow-sm text-gray-900">
+        <div className="space-y-3 sm:space-y-4 bg-white p-4 sm:p-6 rounded-xl sm:rounded-2xl border border-gray-100 shadow-sm text-gray-900">
             {/* Control Header */}
-            <div className="space-y-4 border-b pb-4">
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="space-y-3 sm:space-y-4 border-b pb-3 sm:pb-4">
+                {/* 言語選択とステータス */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
                     <div className="flex items-center space-x-2">
-                        <span className="text-sm font-semibold text-gray-700">認識言語:</span>
+                        <span className="text-xs sm:text-sm font-semibold text-gray-700">認識言語:</span>
                         <select
                             value={lang}
                             onChange={(e) => setLang(e.target.value)}
                             disabled={isRecording}
-                            className="text-sm border rounded px-2 py-1 bg-gray-50 focus:ring-2 focus:ring-indigo-500"
+                            className="text-xs sm:text-sm border rounded px-2 py-1.5 bg-gray-50 focus:ring-2 focus:ring-indigo-500"
                         >
                             <option value="en-US">English (US)</option>
                             <option value="ja-JP">Japanese (日本語)</option>
                         </select>
                     </div>
 
-                    <div className="flex items-center space-x-2 text-sm">
+                    <div className="flex items-center space-x-2 text-xs sm:text-sm">
                         <span className="text-gray-500">ステータス:</span>
                         <span className={`font-bold ${isRecording ? 'text-indigo-600' : 'text-gray-400'}`}>
                             {statusMsg}
@@ -935,8 +936,8 @@ export default function AudioRecorder({ onTranscriptChange, onDurationChange, se
                     </div>
                 </div>
 
-                {/* Whisper使用状態表示 */}
-                <div className="flex items-center justify-between pt-2 border-t">
+                {/* Whisper使用状態表示（スマホ向けに縦並び） */}
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pt-2 border-t">
                     <div className="flex items-center space-x-2">
                         <span className="text-xs font-semibold text-gray-600">音声認識モード:</span>
                         <span className={`text-xs font-bold px-2 py-1 rounded ${
@@ -944,7 +945,7 @@ export default function AudioRecorder({ onTranscriptChange, onDurationChange, se
                                 ? 'bg-indigo-100 text-indigo-700' 
                                 : 'bg-gray-100 text-gray-600'
                         }`}>
-                            {useWhisper ? 'Whisper高精度モード' : '端末STTモード'}
+                            {useWhisper ? 'Whisper高精度' : '端末STT'}
                         </span>
                     </div>
                     {useWhisper && whisperRemainingMinutes !== null && (
@@ -964,10 +965,13 @@ export default function AudioRecorder({ onTranscriptChange, onDurationChange, se
                     )}
                 </div>
 
-                <div className="text-[11px] text-gray-500 mt-2">
-                    Whisper対応: {mediaRecorderSupported ? 'OK' : 'NG'} / 端末STT: {speechRecognitionSupported ? 'OK' : 'NG'} / MIME: {selectedMimeType || '未選択'} / sessionId: {sessionId ? 'OK' : 'NG'}
-                    {debugEnabled && userAgent ? ` / UA: ${userAgent.slice(0, 40)}...` : ''}
-                </div>
+                {/* デバッグ情報（debugモード時のみ表示） */}
+                {debugEnabled && (
+                    <div className="text-[10px] sm:text-[11px] text-gray-400 mt-2 break-all">
+                        Whisper: {mediaRecorderSupported ? 'OK' : 'NG'} / STT: {speechRecognitionSupported ? 'OK' : 'NG'} / MIME: {selectedMimeType || '未選択'} / sessionId: {sessionId ? 'OK' : 'NG'}
+                        {userAgent ? ` / UA: ${userAgent.slice(0, 30)}...` : ''}
+                    </div>
+                )}
 
                 {debugEnabled && (
                     <div className="flex flex-col gap-2 pt-2">
@@ -1039,56 +1043,56 @@ export default function AudioRecorder({ onTranscriptChange, onDurationChange, se
             </div>
 
             {/* Main Recorder Controls */}
-            <div className="flex flex-col items-center justify-center space-y-4 py-4">
+            <div className="flex flex-col items-center justify-center space-y-3 sm:space-y-4 py-3 sm:py-4">
                 {!isRecording && !isTranscribing ? (
                     <button
                         onClick={startRecording}
                         disabled={isTranscribing}
-                        className="bg-red-500 hover:bg-red-600 disabled:bg-gray-400 text-white font-semibold px-10 py-5 rounded-full text-xl transition-all shadow-lg hover:shadow-xl active:scale-95 flex items-center space-x-3"
+                        className="bg-red-500 hover:bg-red-600 disabled:bg-gray-400 text-white font-semibold px-6 sm:px-10 py-4 sm:py-5 rounded-full text-base sm:text-xl transition-all shadow-lg hover:shadow-xl active:scale-95 flex items-center space-x-2 sm:space-x-3 w-full sm:w-auto justify-center"
                     >
-                        <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 20 20">
+                        <svg className="w-6 h-6 sm:w-8 sm:h-8" fill="currentColor" viewBox="0 0 20 20">
                             <path fillRule="evenodd" d="M7 4a3 3 0 016 0v4a3 3 0 11-6 0V4zm4 10.93A7.001 7.001 0 0017 8a1 1 0 10-2 0A5 5 0 015 8a1 1 0 00-2 0 7.001 7.001 0 006 6.93V17H6a1 1 0 100 2h8a1 1 0 100-2h-3v-2.07z" clipRule="evenodd" />
                         </svg>
-                        <span>録音開始 / Speak Now</span>
+                        <span className="text-sm sm:text-base">録音開始</span>
                     </button>
                 ) : isTranscribing ? (
                     <button
                         disabled
-                        className="bg-indigo-500 text-white font-semibold px-10 py-5 rounded-full text-xl transition-all shadow-lg flex items-center space-x-3"
+                        className="bg-indigo-500 text-white font-semibold px-6 sm:px-10 py-4 sm:py-5 rounded-full text-base sm:text-xl transition-all shadow-lg flex items-center space-x-2 sm:space-x-3 w-full sm:w-auto justify-center"
                     >
-                        <svg className="animate-spin h-8 w-8" fill="none" viewBox="0 0 24 24">
+                        <svg className="animate-spin h-6 w-6 sm:h-8 sm:w-8" fill="none" viewBox="0 0 24 24">
                             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                         </svg>
-                        <span>文字起こし中...</span>
+                        <span className="text-sm sm:text-base">文字起こし中...</span>
                     </button>
                 ) : (
                     <button
                         onClick={stopRecording}
-                        className="bg-gray-800 hover:bg-gray-900 text-white font-semibold px-10 py-5 rounded-full text-xl transition-all shadow-lg hover:shadow-xl active:scale-95 flex items-center space-x-3"
+                        className="bg-gray-800 hover:bg-gray-900 text-white font-semibold px-6 sm:px-10 py-4 sm:py-5 rounded-full text-base sm:text-xl transition-all shadow-lg hover:shadow-xl active:scale-95 flex items-center space-x-2 sm:space-x-3 w-full sm:w-auto justify-center"
                     >
-                        <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 20 20">
+                        <svg className="w-6 h-6 sm:w-8 sm:h-8" fill="currentColor" viewBox="0 0 20 20">
                             <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8 7a1 1 0 00-1 1v4a1 1 0 001 1h4a1 1 0 001-1V8a1 1 0 00-1-1H8z" clipRule="evenodd" />
                         </svg>
-                        <span>録音停止 / Finalize</span>
+                        <span className="text-sm sm:text-base">録音停止</span>
                     </button>
                 )}
 
                 {/* Live Feedback Area */}
-                <div className="w-full max-w-sm space-y-2">
+                <div className="w-full max-w-sm space-y-1.5 sm:space-y-2">
                     <div className="flex justify-between items-end">
-                        <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Audio Input Monitor</span>
-                        {isRecording && <span className="font-mono text-indigo-600 font-bold">{formatTime(duration)}</span>}
+                        <span className="text-[10px] sm:text-xs font-bold text-gray-400 uppercase tracking-wider">Audio Input Monitor</span>
+                        {isRecording && <span className="font-mono text-indigo-600 font-bold text-sm sm:text-base">{formatTime(duration)}</span>}
                     </div>
-                    <div className="w-full bg-gray-100 rounded-full h-3 overflow-hidden border border-gray-200">
+                    <div className="w-full bg-gray-100 rounded-full h-2.5 sm:h-3 overflow-hidden border border-gray-200">
                         <div
                             className={`h-full transition-all duration-75 ${audioLevel > 5 ? 'bg-indigo-500' : 'bg-gray-300'}`}
                             style={{ width: `${Math.min(100, audioLevel)}%` }}
                         ></div>
                     </div>
                     {audioLevel <= 1 && isRecording && (
-                        <p className="text-[10px] text-center text-red-500 font-bold animate-pulse">
-                            ⚠️ 音を検知できていません。マイク設定を見直してください
+                        <p className="text-[10px] text-center text-red-500 font-bold animate-pulse px-2">
+                            ⚠️ 音を検知できていません
                         </p>
                     )}
                 </div>
@@ -1096,9 +1100,9 @@ export default function AudioRecorder({ onTranscriptChange, onDurationChange, se
 
             {/* Error/Warning Banner */}
             {micWarning && isRecording && (
-                <div className="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded-xl text-sm flex items-center animate-fade-in shadow-sm">
-                    <svg className="w-5 h-5 mr-3 text-amber-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
-                    <p>
+                <div className="bg-amber-50 border border-amber-200 text-amber-800 px-3 sm:px-4 py-2 sm:py-3 rounded-lg sm:rounded-xl text-xs sm:text-sm flex items-start sm:items-center animate-fade-in shadow-sm">
+                    <svg className="w-4 h-4 sm:w-5 sm:h-5 mr-2 sm:mr-3 text-amber-500 shrink-0 mt-0.5 sm:mt-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                    <p className="flex-1">
                         <strong>音量が小さいようです:</strong> もう少し大きな声で話すか、マイクに近づいてみてください。
                     </p>
                 </div>
@@ -1106,15 +1110,15 @@ export default function AudioRecorder({ onTranscriptChange, onDurationChange, se
 
             {/* Transcription Box */}
             {(transcript || interimTranscript) && (
-                <div className="bg-gray-50 rounded-xl p-5 min-h-[120px] border-2 border-indigo-50 shadow-inner relative">
+                <div className="bg-gray-50 rounded-lg sm:rounded-xl p-3 sm:p-5 min-h-[100px] sm:min-h-[120px] border-2 border-indigo-50 shadow-inner relative">
                     <div className="absolute top-2 right-2">
                         <span className="flex h-2 w-2">
                             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
                             <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-500"></span>
                         </span>
                     </div>
-                    <p className="text-[10px] font-bold text-indigo-400 uppercase mb-2">Live Transcription:</p>
-                    <div className="text-lg text-gray-800 leading-relaxed">
+                    <p className="text-[10px] font-bold text-indigo-400 uppercase mb-1.5 sm:mb-2">Live Transcription:</p>
+                    <div className="text-base sm:text-lg text-gray-800 leading-relaxed pr-6">
                         <span className="opacity-90">{transcript}</span>
                         <span className="text-indigo-600 font-bold border-b-2 border-indigo-200 animate-pulse">{interimTranscript}</span>
                     </div>
@@ -1122,8 +1126,8 @@ export default function AudioRecorder({ onTranscriptChange, onDurationChange, se
             )}
 
             {/* Manual input fallback */}
-            <div className="border-t pt-4 mt-4">
-                <p className="text-sm text-gray-600 mb-2 font-semibold">音声認識がうまく動作しない場合は、こちらに直接入力してください:</p>
+            <div className="border-t pt-3 sm:pt-4 mt-3 sm:mt-4">
+                <p className="text-xs sm:text-sm text-gray-600 mb-2 font-semibold">音声認識がうまく動作しない場合は、こちらに直接入力してください:</p>
                 <textarea
                     value={transcript}
                     onChange={(e) => {
@@ -1131,7 +1135,7 @@ export default function AudioRecorder({ onTranscriptChange, onDurationChange, se
                         onTranscriptChange(e.target.value);
                     }}
                     placeholder="Type your response here..."
-                    className="w-full border border-gray-300 rounded-lg p-3 min-h-[100px] text-gray-900 focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    className="w-full border border-gray-300 rounded-lg p-3 min-h-[80px] sm:min-h-[100px] text-sm sm:text-base text-gray-900 focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                 />
             </div>
         </div>
