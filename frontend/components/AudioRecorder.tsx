@@ -520,6 +520,20 @@ export default function AudioRecorder({ onTranscriptChange, onDurationChange, se
         }
 
         try {
+            // 端末STTが動作中なら停止（マイク競合防止）
+            if (recognitionRef.current) {
+                try {
+                    isRecordingRef.current = false;
+                    recognitionRef.current.stop();
+                } catch (e) {
+                    logEvent('SpeechRecognition stop failed before Whisper start', { err: String(e) });
+                }
+            }
+            if (timerRef.current) {
+                clearInterval(timerRef.current);
+                timerRef.current = null;
+            }
+
             const constraints = {
                 audio: selectedDeviceId ? { deviceId: { ideal: selectedDeviceId } } : true
             };
@@ -775,6 +789,16 @@ export default function AudioRecorder({ onTranscriptChange, onDurationChange, se
 
         const rec = ensureRecognition();
         if (rec) {
+            // 既に起動中なら一度停止して再起動（"already started" 回避）
+            if (isRecordingRef.current) {
+                try {
+                    isRecordingRef.current = false;
+                    rec.stop();
+                } catch (e) {
+                    logEvent('SpeechRecognition stop failed before restart', { err: String(e) });
+                }
+            }
+
             setTranscript('');
             setInterimTranscript('');
             setDuration(0);
@@ -791,6 +815,10 @@ export default function AudioRecorder({ onTranscriptChange, onDurationChange, se
                 if (isDev) console.error('Initial start error:', e);
                 logEvent('SpeechRecognition start() threw', { name, err: String(e) });
                 isStartingRef.current = false;
+                if (String(e).includes('already started')) {
+                    setStatusMsg('聞き取り中...');
+                    return;
+                }
                 if (name === 'NotAllowedError' || name === 'PermissionDeniedError') {
                     setStatusMsg('音声認識が拒否されました（Chromeのサイト設定/OSのマイク権限をご確認ください）');
                 } else {
