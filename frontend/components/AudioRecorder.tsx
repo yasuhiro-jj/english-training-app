@@ -1,13 +1,15 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import { api } from '../lib/api';
 
 interface AudioRecorderProps {
     onTranscriptChange: (transcript: string) => void;
     onDurationChange: (duration: number) => void;
+    sessionId?: string; // Whisper API用のセッションID
 }
 
-export default function AudioRecorder({ onTranscriptChange, onDurationChange }: AudioRecorderProps) {
+export default function AudioRecorder({ onTranscriptChange, onDurationChange, sessionId = '' }: AudioRecorderProps) {
     const [isRecording, setIsRecording] = useState(false);
     const [transcript, setTranscript] = useState('');
     const [duration, setDuration] = useState(0);
@@ -20,6 +22,16 @@ export default function AudioRecorder({ onTranscriptChange, onDurationChange }: 
     const [selectedDeviceId, setSelectedDeviceId] = useState<string>('');
     const [debugEnabled, setDebugEnabled] = useState(false);
     const [debugLogs, setDebugLogs] = useState<string[]>([]);
+    
+    // Whisper関連のstate
+    const [useWhisper, setUseWhisper] = useState(true); // Whisper使用フラグ（デフォルト: true）
+    const [whisperRemainingMinutes, setWhisperRemainingMinutes] = useState<number | null>(null);
+    const [isTranscribing, setIsTranscribing] = useState(false);
+    
+    // MediaRecorder関連のref
+    const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+    const audioChunksRef = useRef<Blob[]>([]);
+    const recordingStartTimeRef = useRef<number>(0);
 
     const recognitionRef = useRef<any>(null);
     const timerRef = useRef<NodeJS.Timeout | null>(null);
@@ -33,6 +45,7 @@ export default function AudioRecorder({ onTranscriptChange, onDurationChange }: 
     const lastFinalRef = useRef<string>('');
     const lastInterimRef = useRef<string>('');
     const lastOnResultLogAtRef = useRef<number>(0);
+    const whisperStreamRef = useRef<MediaStream | null>(null); // Whisper用のストリーム
 
     const isDev = process.env.NODE_ENV === 'development';
 
@@ -84,6 +97,10 @@ export default function AudioRecorder({ onTranscriptChange, onDurationChange }: 
         typeof navigator !== 'undefined' &&
         !!navigator.mediaDevices &&
         typeof navigator.mediaDevices.getUserMedia === 'function';
+
+    const supportsMediaRecorder = () => {
+        return typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported;
+    };
 
     const getDomExceptionName = (err: unknown): string => {
         if (err && typeof err === 'object' && 'name' in err && typeof (err as any).name === 'string') {
@@ -455,7 +472,261 @@ export default function AudioRecorder({ onTranscriptChange, onDurationChange }: 
         setAudioLevel(0);
     };
 
-    const startRecording = async () => {
+    // Blobをbase64に変換する関数
+    const blobToBase64 = (blob: Blob): Promise<string> => {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                const base64String = (reader.result as string).split(',')[1];
+                resolve(base64String);
+            };
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+        });
+    };
+
+    // Whisper用の録音開始
+    const startRecordingWithWhisper = async () => {
+        if (!supportsGetUserMedia()) {
+            setStatusMsg('このブラウザは録音に未対応です');
+            setUseWhisper(false);
+            await startRecordingWithDeviceSTT();
+            return;
+        }
+
+        // MediaRecorderのサポート確認
+        if (!supportsMediaRecorder()) {
+            logEvent('MediaRecorder not supported, falling back to device STT');
+            setStatusMsg('このブラウザはWhisperモードに未対応です。端末STTモードに切り替えます');
+            setUseWhisper(false);
+            await startRecordingWithDeviceSTT();
+            return;
+        }
+
+        try {
+            const constraints = {
+                audio: selectedDeviceId ? { deviceId: { ideal: selectedDeviceId } } : true
+            };
+            const stream = await navigator.mediaDevices.getUserMedia(constraints);
+            whisperStreamRef.current = stream;
+
+            // MediaRecorderの初期化（スマホ対応のMIMEタイプチェック）
+            let mimeType = 'audio/webm'; // デフォルト
+            
+            // iOS Safari対応（audio/mp4を優先）
+            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+            const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+            
+            if (isIOS || isSafari) {
+                // iOS Safariはaudio/mp4またはaudio/aacをサポート
+                if (MediaRecorder.isTypeSupported('audio/mp4')) {
+                    mimeType = 'audio/mp4';
+                } else if (MediaRecorder.isTypeSupported('audio/aac')) {
+                    mimeType = 'audio/aac';
+                } else if (MediaRecorder.isTypeSupported('audio/mp4')) {
+                    mimeType = 'audio/mp4';
+                }
+            } else {
+                // Android Chromeなど
+                if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
+                    mimeType = 'audio/webm;codecs=opus';
+                } else if (MediaRecorder.isTypeSupported('audio/webm')) {
+                    mimeType = 'audio/webm';
+                } else if (MediaRecorder.isTypeSupported('audio/mp4')) {
+                    mimeType = 'audio/mp4';
+                }
+            }
+            
+            logEvent('MediaRecorder MIME type selected', { mimeType, isIOS, isSafari });
+
+            let recorder: MediaRecorder;
+            try {
+                recorder = new MediaRecorder(stream, { mimeType });
+            } catch (mimeError: any) {
+                // MIMEタイプがサポートされていない場合、デフォルトで再試行
+                logEvent('MediaRecorder creation failed with mimeType, trying default', { mimeType, error: String(mimeError) });
+                try {
+                    recorder = new MediaRecorder(stream); // MIMEタイプ指定なしで再試行
+                } catch (defaultError: any) {
+                    logEvent('MediaRecorder creation failed completely', { error: String(defaultError) });
+                    setStatusMsg('録音の開始に失敗しました。端末STTモードに切り替えます');
+                    setUseWhisper(false);
+                    stream.getTracks().forEach(track => track.stop());
+                    await startRecordingWithDeviceSTT();
+                    return;
+                }
+            }
+            
+            audioChunksRef.current = [];
+
+            recorder.ondataavailable = (event) => {
+                if (event.data.size > 0) {
+                    audioChunksRef.current.push(event.data);
+                    logEvent('MediaRecorder data available', { size: event.data.size, type: event.data.type });
+                }
+            };
+            
+            recorder.onerror = (event: any) => {
+                logEvent('MediaRecorder error', { error: event.error || 'Unknown error' });
+                setStatusMsg('録音エラーが発生しました。端末STTモードに切り替えます');
+                setUseWhisper(false);
+                setIsRecording(false);
+                isRecordingRef.current = false;
+            };
+
+            recorder.onstop = () => {
+                // 録音停止時の処理はstopRecordingWithWhisperで実装
+                // ここでは何もしない（setTimeoutで処理するため）
+            };
+
+            mediaRecorderRef.current = recorder;
+            recordingStartTimeRef.current = Date.now();
+            recorder.start();
+            
+            setIsRecording(true);
+            isRecordingRef.current = true;
+            setStatusMsg('Whisper高精度モードで録音中...');
+            setTranscript('');
+            setInterimTranscript('');
+
+            // タイマー開始
+            if (timerRef.current) clearInterval(timerRef.current);
+            timerRef.current = setInterval(() => {
+                setDuration((prev) => prev + 1);
+            }, 1000);
+
+            logEvent('Whisper recording started');
+        } catch (err: any) {
+            const name = getDomExceptionName(err);
+            logEvent('Whisper recording start failed', { name, err: String(err) });
+            if (name === 'NotAllowedError' || name === 'PermissionDeniedError') {
+                setStatusMsg('マイク権限が拒否されました');
+            } else {
+                setStatusMsg('録音の開始に失敗しました');
+            }
+            // エラー時は端末STTにフォールバック
+            setUseWhisper(false);
+            startRecording();
+        }
+    };
+
+    // Whisper用の録音停止と文字起こし
+    const stopRecordingWithWhisper = async () => {
+        if (!mediaRecorderRef.current || !isRecordingRef.current) {
+            return;
+        }
+
+        isRecordingRef.current = false;
+        setIsRecording(false);
+        setIsTranscribing(true);
+        setStatusMsg('文字起こし中...');
+
+        // MediaRecorderを停止
+        if (mediaRecorderRef.current.state !== 'inactive') {
+            mediaRecorderRef.current.stop();
+        }
+
+        // タイマー停止
+        if (timerRef.current) {
+            clearInterval(timerRef.current);
+            timerRef.current = null;
+        }
+
+        // ストリームを停止
+        if (whisperStreamRef.current) {
+            whisperStreamRef.current.getTracks().forEach(track => track.stop());
+            whisperStreamRef.current = null;
+        }
+
+        // 録音データを処理（MediaRecorderのonstopイベントを待つ）
+        const processRecording = async () => {
+            try {
+                // audioChunksが空の場合はエラー
+                if (audioChunksRef.current.length === 0) {
+                    throw new Error('録音データが取得できませんでした');
+                }
+                
+                const blob = new Blob(audioChunksRef.current, { 
+                    type: mediaRecorderRef.current?.mimeType || 'audio/webm' 
+                });
+                
+                logEvent('Blob created', { size: blob.size, type: blob.type });
+                
+                if (blob.size === 0) {
+                    throw new Error('録音データが空です');
+                }
+                
+                const durationSeconds = duration;
+                const base64Audio = await blobToBase64(blob);
+                
+                logEvent('Base64 encoding completed', { 
+                    blobSize: blob.size, 
+                    base64Length: base64Audio.length,
+                    durationSeconds 
+                });
+
+                if (!sessionId) {
+                    throw new Error('セッションIDが設定されていません');
+                }
+
+                // Whisper API呼び出し
+                const result = await api.transcribeWithWhisper(
+                    base64Audio,
+                    sessionId,
+                    durationSeconds
+                );
+
+                setTranscript(result.transcript);
+                onTranscriptChange(result.transcript);
+                
+                if (result.remaining_minutes !== undefined) {
+                    setWhisperRemainingMinutes(result.remaining_minutes);
+                }
+
+                setStatusMsg('文字起こし完了');
+                logEvent('Whisper transcription successful', { 
+                    transcriptLength: result.transcript.length,
+                    remainingMinutes: result.remaining_minutes 
+                });
+            } catch (error: any) {
+                logEvent('Whisper transcription failed', { error: String(error), errorType: error?.name });
+                
+                // エラーメッセージをチェック
+                const errorMessage = error.message || String(error);
+                if (errorMessage.includes('20分') || errorMessage.includes('上限') || errorMessage.includes('制限')) {
+                    // Whisper制限に達した場合、端末STTに自動切り替え
+                    setUseWhisper(false);
+                    setStatusMsg('Whisper制限に達しました。端末STTモードに切り替えました');
+                    setWhisperRemainingMinutes(0);
+                } else if (errorMessage.includes('ネットワーク') || errorMessage.includes('Network') || errorMessage.includes('fetch')) {
+                    // ネットワークエラーの場合
+                    setStatusMsg('ネットワークエラーが発生しました。端末STTモードに切り替えます');
+                    setUseWhisper(false);
+                } else {
+                    setStatusMsg(`文字起こしエラー: ${errorMessage}`);
+                    // エラーが続く場合は端末STTにフォールバック
+                    setUseWhisper(false);
+                }
+            } finally {
+                setIsTranscribing(false);
+                audioChunksRef.current = [];
+                mediaRecorderRef.current = null;
+            }
+        };
+        
+        // MediaRecorderのonstopイベントを待つ
+        if (mediaRecorderRef.current) {
+            mediaRecorderRef.current.onstop = () => {
+                setTimeout(processRecording, 100);
+            };
+        } else {
+            // MediaRecorderが既に停止している場合
+            setTimeout(processRecording, 100);
+        }
+    };
+
+    // 端末STTモードでの録音開始（既存のWeb Speech API）
+    const startRecordingWithDeviceSTT = async () => {
         if (isStartingRef.current) return;
         if (!supportsGetUserMedia()) {
             setStatusMsg('このブラウザは録音に未対応です（getUserMedia不可）');
@@ -474,13 +745,9 @@ export default function AudioRecorder({ onTranscriptChange, onDurationChange }: 
             return;
         }
 
-        if (isDev) console.log('Starting recording sequence...');
-        logEvent('startRecording clicked', { permState });
+        if (isDev) console.log('Starting recording sequence (Device STT)...');
+        logEvent('startRecording clicked (Device STT)', { permState });
 
-        // NOTE:
-        // Android/Chromeでは getUserMedia（マイク取得）と SpeechRecognition が同時にマイクを取り合い、
-        // SpeechRecognition が無反応になることがある。
-        // まずは SpeechRecognition 単体で開始し、音量モニタ(getUserMedia)は録音中は使わない。
         stopAudioMonitoring();
 
         const rec = ensureRecognition();
@@ -491,7 +758,7 @@ export default function AudioRecorder({ onTranscriptChange, onDurationChange }: 
             setIsRecording(true);
             isRecordingRef.current = true;
             isStartingRef.current = true;
-            setStatusMsg('起動中...');
+            setStatusMsg('端末STTモードで起動中...');
 
             try {
                 if (isDev) console.log('Calling recognitionRef.current.start()');
@@ -506,13 +773,11 @@ export default function AudioRecorder({ onTranscriptChange, onDurationChange }: 
                 } else {
                     setStatusMsg('音声認識の起動に失敗しました');
                 }
-                // 失敗時は固まらないように後片付け
                 isRecordingRef.current = false;
                 setIsRecording(false);
                 return;
             }
 
-            // onstart が来ない場合のタイムアウト（Androidで無反応になるケース対策）
             setTimeout(() => {
                 if (!isRecordingRef.current) return;
                 if (isStartingRef.current) {
@@ -520,11 +785,10 @@ export default function AudioRecorder({ onTranscriptChange, onDurationChange }: 
                     isStartingRef.current = false;
                     isRecordingRef.current = false;
                     setIsRecording(false);
-                    setStatusMsg('音声認識が開始しませんでした（端末/Chromeの音声入力制限の可能性）。下のテキスト入力をご利用ください。');
+                    setStatusMsg('音声認識が開始しませんでした。下のテキスト入力をご利用ください。');
                 }
             }, 5000);
 
-            // タイマー開始
             if (timerRef.current) clearInterval(timerRef.current);
             timerRef.current = setInterval(() => {
                 setDuration((prev) => prev + 1);
@@ -532,6 +796,20 @@ export default function AudioRecorder({ onTranscriptChange, onDurationChange }: 
         } else {
             setStatusMsg('音声認識が未対応です。下のテキスト入力をご利用ください。');
             logEvent('SpeechRecognition ctor missing');
+        }
+    };
+
+    // 録音開始（Whisper/端末STTを自動選択）
+    const startRecording = async () => {
+        // MediaRecorderがサポートされていない場合やsessionIdがない場合は端末STTを使用
+        if (useWhisper && sessionId && supportsMediaRecorder()) {
+            await startRecordingWithWhisper();
+        } else {
+            if (useWhisper && !supportsMediaRecorder()) {
+                logEvent('MediaRecorder not supported, using device STT');
+                setUseWhisper(false);
+            }
+            await startRecordingWithDeviceSTT();
         }
     };
 
@@ -544,20 +822,27 @@ export default function AudioRecorder({ onTranscriptChange, onDurationChange }: 
 
     const stopRecording = () => {
         if (isDev) console.log('Stopping recording sequence...');
-        isRecordingRef.current = false;
-        setIsRecording(false);
-        stopAudioMonitoring();
+        
+        if (useWhisper && mediaRecorderRef.current) {
+            // Whisperモードの場合
+            stopRecordingWithWhisper();
+        } else {
+            // 端末STTモードの場合
+            isRecordingRef.current = false;
+            setIsRecording(false);
+            stopAudioMonitoring();
 
-        if (recognitionRef.current) {
-            try {
-                recognitionRef.current.stop();
-            } catch (e) { }
+            if (recognitionRef.current) {
+                try {
+                    recognitionRef.current.stop();
+                } catch (e) { }
+            }
+            if (timerRef.current) {
+                clearInterval(timerRef.current);
+                timerRef.current = null;
+            }
+            setInterimTranscript('');
         }
-        if (timerRef.current) {
-            clearInterval(timerRef.current);
-            timerRef.current = null;
-        }
-        setInterimTranscript('');
     };
 
     const formatTime = (seconds: number) => {
@@ -590,6 +875,35 @@ export default function AudioRecorder({ onTranscriptChange, onDurationChange }: 
                             {statusMsg}
                         </span>
                     </div>
+                </div>
+
+                {/* Whisper使用状態表示 */}
+                <div className="flex items-center justify-between pt-2 border-t">
+                    <div className="flex items-center space-x-2">
+                        <span className="text-xs font-semibold text-gray-600">音声認識モード:</span>
+                        <span className={`text-xs font-bold px-2 py-1 rounded ${
+                            useWhisper 
+                                ? 'bg-indigo-100 text-indigo-700' 
+                                : 'bg-gray-100 text-gray-600'
+                        }`}>
+                            {useWhisper ? 'Whisper高精度モード' : '端末STTモード'}
+                        </span>
+                    </div>
+                    {useWhisper && whisperRemainingMinutes !== null && (
+                        <div className="text-xs text-gray-600">
+                            <span className="font-semibold">Whisper残り: </span>
+                            <span className={`font-bold ${
+                                whisperRemainingMinutes <= 5 ? 'text-red-600' : 'text-indigo-600'
+                            }`}>
+                                {whisperRemainingMinutes.toFixed(1)}分 / 20分
+                            </span>
+                        </div>
+                    )}
+                    {!useWhisper && whisperRemainingMinutes === 0 && (
+                        <div className="text-xs text-amber-600 font-semibold">
+                            Whisper制限に達しました
+                        </div>
+                    )}
                 </div>
 
                 {debugEnabled && (
@@ -663,15 +977,27 @@ export default function AudioRecorder({ onTranscriptChange, onDurationChange }: 
 
             {/* Main Recorder Controls */}
             <div className="flex flex-col items-center justify-center space-y-4 py-4">
-                {!isRecording ? (
+                {!isRecording && !isTranscribing ? (
                     <button
                         onClick={startRecording}
-                        className="bg-red-500 hover:bg-red-600 text-white font-semibold px-10 py-5 rounded-full text-xl transition-all shadow-lg hover:shadow-xl active:scale-95 flex items-center space-x-3"
+                        disabled={isTranscribing}
+                        className="bg-red-500 hover:bg-red-600 disabled:bg-gray-400 text-white font-semibold px-10 py-5 rounded-full text-xl transition-all shadow-lg hover:shadow-xl active:scale-95 flex items-center space-x-3"
                     >
                         <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 20 20">
                             <path fillRule="evenodd" d="M7 4a3 3 0 016 0v4a3 3 0 11-6 0V4zm4 10.93A7.001 7.001 0 0017 8a1 1 0 10-2 0A5 5 0 015 8a1 1 0 00-2 0 7.001 7.001 0 006 6.93V17H6a1 1 0 100 2h8a1 1 0 100-2h-3v-2.07z" clipRule="evenodd" />
                         </svg>
                         <span>録音開始 / Speak Now</span>
+                    </button>
+                ) : isTranscribing ? (
+                    <button
+                        disabled
+                        className="bg-indigo-500 text-white font-semibold px-10 py-5 rounded-full text-xl transition-all shadow-lg flex items-center space-x-3"
+                    >
+                        <svg className="animate-spin h-8 w-8" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        <span>文字起こし中...</span>
                     </button>
                 ) : (
                     <button
