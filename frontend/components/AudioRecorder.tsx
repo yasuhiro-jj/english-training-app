@@ -22,6 +22,10 @@ export default function AudioRecorder({ onTranscriptChange, onDurationChange, se
     const [selectedDeviceId, setSelectedDeviceId] = useState<string>('');
     const [debugEnabled, setDebugEnabled] = useState(false);
     const [debugLogs, setDebugLogs] = useState<string[]>([]);
+    const [mediaRecorderSupported, setMediaRecorderSupported] = useState<boolean | null>(null);
+    const [speechRecognitionSupported, setSpeechRecognitionSupported] = useState<boolean | null>(null);
+    const [selectedMimeType, setSelectedMimeType] = useState('');
+    const [userAgent, setUserAgent] = useState('');
     
     // Whisper関連のstate
     const [useWhisper, setUseWhisper] = useState(true); // Whisper使用フラグ（デフォルト: true）
@@ -98,9 +102,21 @@ export default function AudioRecorder({ onTranscriptChange, onDurationChange, se
         !!navigator.mediaDevices &&
         typeof navigator.mediaDevices.getUserMedia === 'function';
 
-    const supportsMediaRecorder = () => {
-        return typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported;
-    };
+    const supportsMediaRecorder = () =>
+        typeof window !== 'undefined' && typeof MediaRecorder !== 'undefined';
+
+    useEffect(() => {
+        if (typeof navigator !== 'undefined') {
+            setUserAgent(navigator.userAgent);
+        }
+        const mediaSupported = supportsMediaRecorder();
+        const speechSupported = supportsSpeechRecognition();
+        setMediaRecorderSupported(mediaSupported);
+        setSpeechRecognitionSupported(speechSupported);
+        if (!mediaSupported) {
+            setUseWhisper(false);
+        }
+    }, []);
 
     const getDomExceptionName = (err: unknown): string => {
         if (err && typeof err === 'object' && 'name' in err && typeof (err as any).name === 'string') {
@@ -512,6 +528,7 @@ export default function AudioRecorder({ onTranscriptChange, onDurationChange, se
 
             // MediaRecorderの初期化（スマホ対応のMIMEタイプチェック）
             let mimeType = 'audio/webm'; // デフォルト
+            const canCheckMime = typeof MediaRecorder !== 'undefined' && typeof MediaRecorder.isTypeSupported === 'function';
             
             // iOS Safari対応（audio/mp4を優先）
             const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
@@ -519,25 +536,30 @@ export default function AudioRecorder({ onTranscriptChange, onDurationChange, se
             
             if (isIOS || isSafari) {
                 // iOS Safariはaudio/mp4またはaudio/aacをサポート
-                if (MediaRecorder.isTypeSupported('audio/mp4')) {
+                if (canCheckMime && MediaRecorder.isTypeSupported('audio/mp4')) {
                     mimeType = 'audio/mp4';
-                } else if (MediaRecorder.isTypeSupported('audio/aac')) {
+                } else if (canCheckMime && MediaRecorder.isTypeSupported('audio/aac')) {
                     mimeType = 'audio/aac';
-                } else if (MediaRecorder.isTypeSupported('audio/mp4')) {
+                } else if (canCheckMime && MediaRecorder.isTypeSupported('audio/mp4')) {
+                    mimeType = 'audio/mp4';
+                } else {
                     mimeType = 'audio/mp4';
                 }
             } else {
                 // Android Chromeなど
-                if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
+                if (canCheckMime && MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
                     mimeType = 'audio/webm;codecs=opus';
-                } else if (MediaRecorder.isTypeSupported('audio/webm')) {
+                } else if (canCheckMime && MediaRecorder.isTypeSupported('audio/webm')) {
                     mimeType = 'audio/webm';
-                } else if (MediaRecorder.isTypeSupported('audio/mp4')) {
+                } else if (canCheckMime && MediaRecorder.isTypeSupported('audio/mp4')) {
                     mimeType = 'audio/mp4';
+                } else {
+                    mimeType = 'audio/webm';
                 }
             }
             
             logEvent('MediaRecorder MIME type selected', { mimeType, isIOS, isSafari });
+            setSelectedMimeType(mimeType);
 
             let recorder: MediaRecorder;
             try {
@@ -547,6 +569,7 @@ export default function AudioRecorder({ onTranscriptChange, onDurationChange, se
                 logEvent('MediaRecorder creation failed with mimeType, trying default', { mimeType, error: String(mimeError) });
                 try {
                     recorder = new MediaRecorder(stream); // MIMEタイプ指定なしで再試行
+                    setSelectedMimeType('default');
                 } catch (defaultError: any) {
                     logEvent('MediaRecorder creation failed completely', { error: String(defaultError) });
                     setStatusMsg('録音の開始に失敗しました。端末STTモードに切り替えます');
@@ -905,6 +928,13 @@ export default function AudioRecorder({ onTranscriptChange, onDurationChange, se
                         </div>
                     )}
                 </div>
+
+                {(debugEnabled || mediaRecorderSupported === false || speechRecognitionSupported === false) && (
+                    <div className="text-[11px] text-gray-500 mt-2">
+                        Whisper対応: {mediaRecorderSupported ? 'OK' : 'NG'} / 端末STT: {speechRecognitionSupported ? 'OK' : 'NG'} / MIME: {selectedMimeType || '未選択'}
+                        {debugEnabled && userAgent ? ` / UA: ${userAgent.slice(0, 40)}...` : ''}
+                    </div>
+                )}
 
                 {debugEnabled && (
                     <div className="flex flex-col gap-2 pt-2">
