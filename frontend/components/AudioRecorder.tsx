@@ -852,14 +852,21 @@ export default function AudioRecorder({ onTranscriptChange, onDurationChange, se
 
     // 録音開始（Whisper/端末STTを自動選択）
     const startRecording = async () => {
+        logEvent('startRecording entry', {
+            useWhisper,
+            hasSessionId: Boolean(sessionId),
+            mediaRecorderSupported,
+        });
         // MediaRecorderがサポートされていない場合やsessionIdがない場合は端末STTを使用
         if (useWhisper && sessionId && supportsMediaRecorder()) {
+            logEvent('startRecording path', { mode: 'whisper' });
             await startRecordingWithWhisper();
         } else {
             if (useWhisper && !supportsMediaRecorder()) {
                 logEvent('MediaRecorder not supported, using device STT');
                 setUseWhisper(false);
             }
+            logEvent('startRecording path', { mode: 'device-stt' });
             await startRecordingWithDeviceSTT();
         }
     };
@@ -957,12 +964,10 @@ export default function AudioRecorder({ onTranscriptChange, onDurationChange, se
                     )}
                 </div>
 
-                {(debugEnabled || mediaRecorderSupported === false || speechRecognitionSupported === false) && (
-                    <div className="text-[11px] text-gray-500 mt-2">
-                        Whisper対応: {mediaRecorderSupported ? 'OK' : 'NG'} / 端末STT: {speechRecognitionSupported ? 'OK' : 'NG'} / MIME: {selectedMimeType || '未選択'}
-                        {debugEnabled && userAgent ? ` / UA: ${userAgent.slice(0, 40)}...` : ''}
-                    </div>
-                )}
+                <div className="text-[11px] text-gray-500 mt-2">
+                    Whisper対応: {mediaRecorderSupported ? 'OK' : 'NG'} / 端末STT: {speechRecognitionSupported ? 'OK' : 'NG'} / MIME: {selectedMimeType || '未選択'} / sessionId: {sessionId ? 'OK' : 'NG'}
+                    {debugEnabled && userAgent ? ` / UA: ${userAgent.slice(0, 40)}...` : ''}
+                </div>
 
                 {debugEnabled && (
                     <div className="flex flex-col gap-2 pt-2">
