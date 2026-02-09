@@ -73,18 +73,18 @@ export default function LandingPage() {
     <main className="w-full min-h-screen bg-white text-gray-900 overflow-x-hidden">
       {/* Header */}
       <header className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-2 sm:py-3 flex items-center justify-between">
           <div className="flex items-center space-x-2">
-            <div className="w-10 h-10 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-xl flex items-center justify-center">
-              <BookOpen className="w-6 h-6 text-white" />
+            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-xl flex items-center justify-center">
+              <BookOpen className="w-4 h-4 sm:w-6 sm:h-6 text-white" />
             </div>
-            <span className="text-xl font-bold text-gray-900">Daily News English</span>
+            <span className="text-base sm:text-lg md:text-xl font-bold text-gray-900">Daily News English</span>
           </div>
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-2 sm:space-x-4">
             {user ? (
               <Link
                 href="/dashboard"
-                className="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-full transition-colors"
+                className="px-4 sm:px-6 py-1.5 sm:py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm sm:text-base font-bold rounded-full transition-colors"
               >
                 ダッシュボードへ
               </Link>
@@ -92,13 +92,13 @@ export default function LandingPage() {
               <>
                 <Link
                   href="/login"
-                  className="text-gray-700 hover:text-gray-900 font-semibold transition-colors"
+                  className="text-gray-700 hover:text-gray-900 text-sm sm:text-base font-semibold transition-colors"
                 >
                   ログイン
                 </Link>
                 <Link
                   href="/signup"
-                  className="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-full transition-colors"
+                  className="px-4 sm:px-6 py-1.5 sm:py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm sm:text-base font-bold rounded-full transition-colors"
                 >
                   無料で始める
                 </Link>
@@ -118,20 +118,20 @@ export default function LandingPage() {
           </FadeInUp>
           
           <FadeInUp delay={0.1}>
-            <h1 className="text-4xl md:text-6xl font-black text-gray-900 mb-6 leading-tight">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-black text-gray-900 mb-6 leading-tight px-4 max-w-5xl mx-auto">
               表面的な会話を超えて、<br />
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600">
-                英語で"本当のあなた"<br />を伝えたい
+                英語で<br />"本当のあなた"<br />を伝えたい
               </span>
               <br />ビジネスマンへ
             </h1>
           </FadeInUp>
           
           <FadeInUp delay={0.2}>
-            <p className="text-xl text-gray-700 mb-8 leading-relaxed max-w-4xl mx-auto">
+            <p className="text-base sm:text-lg md:text-xl text-gray-700 mb-8 leading-relaxed max-w-4xl mx-auto px-4">
               天気や趣味の話だけでいいですか？<br />
               世界のニュースを題材に、日本語で考えるような深い会話を英語で実現し、<br />
-              <span className="font-semibold text-gray-900">真のあなたを知ってもらう議論力を身につける。</span>
+              <span className="font-semibold text-gray-900">真のあなたを知ってもらう<br />議論力を身につける。</span>
             </p>
           </FadeInUp>
 
@@ -168,9 +168,9 @@ export default function LandingPage() {
               <div className="inline-block px-4 py-2 bg-indigo-100 text-indigo-700 rounded-full text-sm font-bold mb-4">
                 ターゲット & 悩み
               </div>
-              <h2 className="text-4xl font-bold text-gray-900 mb-4">
-                こんなお悩みありませんか？
-              </h2>
+            <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+              こんなお悩みありませんか？
+            </h2>
             </div>
           </FadeInUp>
           
@@ -199,10 +199,13 @@ export default function LandingPage() {
               <div className="inline-block px-4 py-2 bg-purple-100 text-purple-700 rounded-full text-sm font-bold mb-4">
                 機能の3本柱
               </div>
-              <h2 className="text-4xl font-bold text-gray-900 mb-4">
+              <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 mb-4">
                 深いコミュニケーション力を<br />
                 身につける3つのステップ
               </h2>
+              <p className="text-sm sm:text-base md:text-lg text-gray-600 mt-4 max-w-3xl mx-auto">
+                読む（教養を深める）→ 話す（豊かな人間性を発信）→ 振り返る（深いコミュニケーション力を磨く）
+              </p>
             </div>
           </FadeInUp>
 
@@ -267,12 +270,15 @@ export default function LandingPage() {
               <div className="inline-block px-4 py-2 bg-indigo-100 text-indigo-700 rounded-full text-sm font-bold mb-4">
                 他社比較
               </div>
-              <h2 className="text-4xl font-bold text-gray-900 mb-4">
+              <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 mb-4">
                 表面的な英会話ではなく、<br />
                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600">
                   「世界人として活躍するための深いコミュニケーション力」を養う
                 </span>
               </h2>
+              <p className="text-sm sm:text-base md:text-lg text-gray-600 mt-4 max-w-3xl mx-auto">
+                議論力・論理構成・豊かな人間性の表現力を身につけ、真のあなたを伝える力を獲得します
+              </p>
             </div>
           </FadeInUp>
 
@@ -324,9 +330,9 @@ export default function LandingPage() {
               <div className="inline-block px-4 py-2 bg-indigo-100 text-indigo-700 rounded-full text-sm font-bold mb-4">
                 1レッスンの流れ
               </div>
-              <h2 className="text-4xl font-bold text-gray-900 mb-4">
+              <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 mb-4">
                 一時的な会話ではなく、<br />
-                あなたの考えをフルに表現する訓練
+                あなたの考えを<br />フルに表現する訓練
               </h2>
               <p className="text-xl text-gray-600 max-w-3xl mx-auto">
                 表面的な英会話を超えて、深い議論と意見交換の力を身につけます
@@ -416,9 +422,12 @@ export default function LandingPage() {
               <div className="inline-block px-4 py-2 bg-green-100 text-green-700 rounded-full text-sm font-bold mb-4">
                 学習習慣の形成
               </div>
-              <h2 className="text-4xl font-bold text-gray-900 mb-4">
+              <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 mb-4">
                 1日10〜15分、英語で深く考えて議論することであなたの力を伸ばします
               </h2>
+              <p className="text-sm sm:text-base md:text-lg text-gray-600 mt-4 max-w-3xl mx-auto">
+                初めは大変かもしれませんが、毎日の継続があなたの力になります。フィードバックがあるのでいつでも見直しができ、着実な成長を実感できます。
+              </p>
             </div>
           </FadeInUp>
 
@@ -476,7 +485,7 @@ export default function LandingPage() {
               <div className="inline-block px-4 py-2 bg-green-100 text-green-700 rounded-full text-sm font-bold mb-4">
                 料金
               </div>
-              <h2 className="text-4xl font-bold text-gray-900 mb-4">
+              <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 mb-4">
                 シンプルさ重視。<br />
                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600">
                   投資対効果を実感できる設計
@@ -821,17 +830,19 @@ export default function LandingPage() {
       <section className="py-20 px-6 bg-gradient-to-br from-indigo-600 to-purple-600">
         <div className="max-w-4xl mx-auto text-center">
           <FadeInUp>
-            <h2 className="text-4xl md:text-5xl font-black text-white mb-6">
-              3分の英語ディスカッションで、<br />
-              本当のあなたを伝える第一歩を
+            <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-black text-white mb-6">
+              3分の英語<br />ディスカッションで、<br />
+              本当のあなたを<br />伝える第一歩を
             </h2>
           </FadeInUp>
           
           <FadeInUp delay={0.2}>
-            <p className="text-xl text-indigo-100 mb-10 max-w-3xl mx-auto">
-              <span className="font-semibold text-white">表面的な会話を超えて、英語で"本当のあなた"を伝えたいビジネスマンへ。</span><br />
-              世界のニュースを題材に、日本語で考えるような深い会話を英語で実現し、<br />
-              真のあなたを知ってもらう議論力を身につけましょう。
+            <p className="text-base sm:text-lg md:text-xl text-indigo-100 mb-10 max-w-3xl mx-auto">
+              <span className="font-semibold text-white block mb-3">表面的な会話を超えて、英語で"本当のあなた"を伝えたいビジネスマンへ。</span>
+              世界のニュースを題材に、<br />
+              日本語で考えるような<br />深い会話を英語で実現し、<br />
+              真のあなたを知ってもらう<br />
+              議論力を身につけましょう。
             </p>
           </FadeInUp>
 
