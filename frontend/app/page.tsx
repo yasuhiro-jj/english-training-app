@@ -109,7 +109,7 @@ export default function LandingPage() {
       </header>
 
       {/* Hero Section */}
-      <section className="pt-32 pb-20 px-6 bg-gradient-to-b from-indigo-50 to-white">
+      <section className="pt-40 pb-20 px-6 bg-gradient-to-b from-indigo-50 to-white">
         <div className="max-w-6xl mx-auto text-center">
           <FadeInUp>
             <div className="inline-block px-4 py-2 bg-indigo-100 text-indigo-700 rounded-full text-sm font-bold mb-4">
@@ -415,7 +415,7 @@ export default function LandingPage() {
       </section>
 
       {/* Learning Habit Formation Section */}
-      <section className="py-20 px-6 bg-white">
+      <section className="py-16 px-6 bg-white">
         <div className="max-w-6xl mx-auto">
           <FadeInUp>
             <div className="text-center mb-12">
@@ -657,99 +657,99 @@ export default function LandingPage() {
                 <table className="w-full">
                   <thead>
                     <tr className="border-b-2 border-gray-300">
-                      <th className="text-left py-4 px-4 font-bold text-gray-900">機能</th>
-                      <th className="text-center py-4 px-4 font-bold text-indigo-600">Basic<br />¥2,980/月</th>
-                      <th className="text-center py-4 px-4 font-bold text-purple-600 bg-purple-50 rounded-lg">Premium<br />¥4,980/月</th>
+                      <th className="text-left py-4 px-2 sm:px-4 text-xs sm:text-sm font-bold text-gray-900">機能</th>
+                      <th className="text-center py-4 px-2 sm:px-4 text-xs sm:text-sm font-bold text-indigo-600">Basic<br />¥2,980/月</th>
+                      <th className="text-center py-4 px-2 sm:px-4 text-xs sm:text-sm font-bold text-purple-600 bg-purple-50 rounded-lg">Premium<br />¥4,980/月</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
                     <tr>
-                      <td className="py-4 px-4 text-gray-700 font-medium">レッスン回数</td>
-                      <td className="py-4 px-4 text-center">
-                        <CheckCircle2 className="w-5 h-5 text-indigo-500 mx-auto" />
-                        <span className="text-sm text-gray-600">無制限</span>
+                      <td className="py-4 px-2 sm:px-4 text-xs sm:text-sm text-gray-700 font-medium">レッスン回数</td>
+                      <td className="py-4 px-2 sm:px-4 text-center">
+                        <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-500 mx-auto" />
+                        <span className="text-xs sm:text-sm text-gray-600">無制限</span>
                       </td>
-                      <td className="py-4 px-4 text-center bg-purple-50">
-                        <CheckCircle2 className="w-5 h-5 text-purple-500 mx-auto" />
-                        <span className="text-sm text-gray-600">無制限</span>
+                      <td className="py-4 px-2 sm:px-4 text-center bg-purple-50">
+                        <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5 text-purple-500 mx-auto" />
+                        <span className="text-xs sm:text-sm text-gray-600">無制限</span>
                       </td>
                     </tr>
                     <tr>
-                      <td className="py-4 px-4 text-gray-700 font-medium">AIコーチング</td>
-                      <td className="py-4 px-4 text-center">
-                        <span className="text-sm text-gray-600">100メッセージ/月</span>
+                      <td className="py-4 px-2 sm:px-4 text-xs sm:text-sm text-gray-700 font-medium">AIコーチング</td>
+                      <td className="py-4 px-2 sm:px-4 text-center">
+                        <span className="text-xs sm:text-sm text-gray-600">100メッセージ/月</span>
                       </td>
-                      <td className="py-4 px-4 text-center bg-purple-50">
-                        <span className="text-sm font-semibold text-purple-600">無制限</span>
+                      <td className="py-4 px-2 sm:px-4 text-center bg-purple-50">
+                        <span className="text-xs sm:text-sm font-semibold text-purple-600">無制限</span>
                         <span className="block text-xs text-purple-500 mt-1">✨ Premium限定</span>
                       </td>
                     </tr>
                     <tr>
-                      <td className="py-4 px-4 text-gray-700 font-medium">文法・発音フィードバック</td>
-                      <td className="py-4 px-4 text-center">
-                        <CheckCircle2 className="w-5 h-5 text-indigo-500 mx-auto" />
-                        <span className="text-sm text-gray-600">詳細版</span>
+                      <td className="py-4 px-2 sm:px-4 text-xs sm:text-sm text-gray-700 font-medium">文法・発音フィードバック</td>
+                      <td className="py-4 px-2 sm:px-4 text-center">
+                        <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-500 mx-auto" />
+                        <span className="text-xs sm:text-sm text-gray-600">詳細版</span>
                       </td>
-                      <td className="py-4 px-4 text-center bg-purple-50">
-                        <CheckCircle2 className="w-5 h-5 text-purple-500 mx-auto" />
-                        <span className="text-sm text-gray-600">詳細版</span>
+                      <td className="py-4 px-2 sm:px-4 text-center bg-purple-50">
+                        <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5 text-purple-500 mx-auto" />
+                        <span className="text-xs sm:text-sm text-gray-600">詳細版</span>
                       </td>
                     </tr>
                     <tr>
-                      <td className="py-4 px-4 text-gray-700 font-medium">発音分析</td>
-                      <td className="py-4 px-4 text-center">
-                        <span className="text-sm text-gray-600">基本版</span>
+                      <td className="py-4 px-2 sm:px-4 text-xs sm:text-sm text-gray-700 font-medium">発音分析</td>
+                      <td className="py-4 px-2 sm:px-4 text-center">
+                        <span className="text-xs sm:text-sm text-gray-600">基本版</span>
                       </td>
-                      <td className="py-4 px-4 text-center bg-purple-50">
-                        <span className="text-sm font-semibold text-purple-600">詳細版</span>
+                      <td className="py-4 px-2 sm:px-4 text-center bg-purple-50">
+                        <span className="text-xs sm:text-sm font-semibold text-purple-600">詳細版</span>
                         <span className="block text-xs text-purple-500 mt-1">✨ Premium限定</span>
                       </td>
                     </tr>
                     <tr>
-                      <td className="py-4 px-4 text-gray-700 font-medium">Notionへの自動保存</td>
-                      <td className="py-4 px-4 text-center">
-                        <CheckCircle2 className="w-5 h-5 text-indigo-500 mx-auto" />
+                      <td className="py-4 px-2 sm:px-4 text-xs sm:text-sm text-gray-700 font-medium">Notionへの自動保存</td>
+                      <td className="py-4 px-2 sm:px-4 text-center">
+                        <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-500 mx-auto" />
                       </td>
-                      <td className="py-4 px-4 text-center bg-purple-50">
-                        <CheckCircle2 className="w-5 h-5 text-purple-500 mx-auto" />
-                      </td>
-                    </tr>
-                    <tr>
-                      <td className="py-4 px-4 text-gray-700 font-medium">学習進捗の可視化</td>
-                      <td className="py-4 px-4 text-center">
-                        <CheckCircle2 className="w-5 h-5 text-indigo-500 mx-auto" />
-                      </td>
-                      <td className="py-4 px-4 text-center bg-purple-50">
-                        <CheckCircle2 className="w-5 h-5 text-purple-500 mx-auto" />
+                      <td className="py-4 px-2 sm:px-4 text-center bg-purple-50">
+                        <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5 text-purple-500 mx-auto" />
                       </td>
                     </tr>
                     <tr>
-                      <td className="py-4 px-4 text-gray-700 font-medium">カスタム学習プラン</td>
-                      <td className="py-4 px-4 text-center">
-                        <span className="text-sm text-gray-400">-</span>
+                      <td className="py-4 px-2 sm:px-4 text-xs sm:text-sm text-gray-700 font-medium">学習進捗の可視化</td>
+                      <td className="py-4 px-2 sm:px-4 text-center">
+                        <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-500 mx-auto" />
                       </td>
-                      <td className="py-4 px-4 text-center bg-purple-50">
-                        <CheckCircle2 className="w-5 h-5 text-purple-500 mx-auto" />
+                      <td className="py-4 px-2 sm:px-4 text-center bg-purple-50">
+                        <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5 text-purple-500 mx-auto" />
+                      </td>
+                    </tr>
+                    <tr>
+                      <td className="py-4 px-2 sm:px-4 text-xs sm:text-sm text-gray-700 font-medium">カスタム学習プラン</td>
+                      <td className="py-4 px-2 sm:px-4 text-center">
+                        <span className="text-xs sm:text-sm text-gray-400">-</span>
+                      </td>
+                      <td className="py-4 px-2 sm:px-4 text-center bg-purple-50">
+                        <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5 text-purple-500 mx-auto" />
                         <span className="block text-xs text-purple-500 mt-1">✨ Premium限定</span>
                       </td>
                     </tr>
                     <tr>
-                      <td className="py-4 px-4 text-gray-700 font-medium">週次学習レポート</td>
-                      <td className="py-4 px-4 text-center">
-                        <span className="text-sm text-gray-400">-</span>
+                      <td className="py-4 px-2 sm:px-4 text-xs sm:text-sm text-gray-700 font-medium">週次学習レポート</td>
+                      <td className="py-4 px-2 sm:px-4 text-center">
+                        <span className="text-xs sm:text-sm text-gray-400">-</span>
                       </td>
-                      <td className="py-4 px-4 text-center bg-purple-50">
-                        <CheckCircle2 className="w-5 h-5 text-purple-500 mx-auto" />
+                      <td className="py-4 px-2 sm:px-4 text-center bg-purple-50">
+                        <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5 text-purple-500 mx-auto" />
                         <span className="block text-xs text-purple-500 mt-1">✨ Premium限定</span>
                       </td>
                     </tr>
                     <tr>
-                      <td className="py-4 px-4 text-gray-700 font-medium">サポート</td>
-                      <td className="py-4 px-4 text-center">
-                        <span className="text-sm text-gray-600">標準サポート</span>
+                      <td className="py-4 px-2 sm:px-4 text-xs sm:text-sm text-gray-700 font-medium">サポート</td>
+                      <td className="py-4 px-2 sm:px-4 text-center">
+                        <span className="text-xs sm:text-sm text-gray-600">標準サポート</span>
                       </td>
-                      <td className="py-4 px-4 text-center bg-purple-50">
-                        <span className="text-sm font-semibold text-purple-600">優先サポート</span>
+                      <td className="py-4 px-2 sm:px-4 text-center bg-purple-50">
+                        <span className="text-xs sm:text-sm font-semibold text-purple-600">優先サポート</span>
                         <span className="block text-xs text-purple-500 mt-1">✨ Premium限定</span>
                       </td>
                     </tr>
