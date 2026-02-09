@@ -46,6 +46,7 @@ export default function LoginPage() {
             login(email, data.access_token);
             console.log('[Login] Success, redirecting to dashboard');
             // 認証Contextの反映タイミング問題を避けるためフルリロードで遷移
+            // ダッシュボードページで体験期間終了をチェックして通知を表示
             window.location.href = '/dashboard';
 
         } catch (err: any) {

@@ -12,6 +12,7 @@ export default function DashboardPage() {
     const [stats, setStats] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+    const [showTrialExpiredNotification, setShowTrialExpiredNotification] = useState(false);
 
     useEffect(() => {
         if (user) {
@@ -20,6 +21,12 @@ export default function DashboardPage() {
                 try {
                     const data = await api.getDashboardStats();
                     setStats(data);
+                    
+                    // 体験期間終了をチェック
+                    if (data.subscription && !data.subscription.is_trial && data.subscription.status === 'expired') {
+                        // 常にダッシュボードに表示
+                        setShowTrialExpiredNotification(true);
+                    }
                 } catch (err: any) {
                     console.error('[Dashboard] Error fetching stats:', err);
                     // 401エラーの場合、authenticatedFetchで既にlocalStorageがクリアされ、
@@ -142,6 +149,39 @@ export default function DashboardPage() {
                 {error && (
                     <div className="mb-8 p-4 bg-red-100 border border-red-300 rounded-xl text-red-700 backdrop-blur-md">
                         {error}
+                    </div>
+                )}
+
+                {/* 体験期間終了通知 */}
+                {showTrialExpiredNotification && (
+                    <div className="mb-8 p-6 bg-gradient-to-r from-indigo-50 to-purple-50 border-2 border-indigo-300 rounded-2xl shadow-lg">
+                        <div className="flex items-start space-x-4">
+                            <div className="w-12 h-12 bg-indigo-600 rounded-xl flex items-center justify-center flex-shrink-0">
+                                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                            </div>
+                            <div className="flex-1">
+                                <h3 className="text-lg font-bold text-gray-900 mb-2">体験期間が終了しました</h3>
+                                <p className="text-gray-700 mb-4">
+                                    7日間の無料体験期間が終了しました。引き続きご利用いただく場合は、有料プランへのご登録をお願いいたします。
+                                </p>
+                                <div className="flex flex-col sm:flex-row gap-3">
+                                    <button
+                                        onClick={() => router.push('/')}
+                                        className="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg transition-colors"
+                                    >
+                                        プランを確認する
+                                    </button>
+                                    <button
+                                        onClick={() => setShowTrialExpiredNotification(false)}
+                                        className="px-6 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold rounded-lg transition-colors"
+                                    >
+                                        閉じる
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 )}
 

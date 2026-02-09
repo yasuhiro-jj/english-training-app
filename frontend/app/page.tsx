@@ -346,9 +346,9 @@ export default function LandingPage() {
                 <div className="w-14 h-14 bg-indigo-600 text-white rounded-full flex items-center justify-center text-xl font-bold mx-auto mb-4">
                   1
                 </div>
-                <h3 className="text-lg font-bold text-gray-900 mb-3">トピック選択</h3>
+                <h3 className="text-lg font-bold text-gray-900 mb-3">レッスン生成</h3>
                 <p className="text-sm text-gray-600">
-                  世界の最新ニュースから、あなたが深く議論したいトピックを選択
+                  世界の最新ニュースから、AIが自動的に英語レッスンを生成
                 </p>
               </div>
             </FadeInUp>
@@ -452,7 +452,7 @@ export default function LandingPage() {
                   <TrendingUp className="w-6 h-6 text-white" />
                 </div>
                 <h3 className="text-xl font-bold text-gray-900 mb-3">
-                  初めは大変かもしれませんが、<br />毎日の継続があなたの力になります
+                  初めは大変かもしれませんが、毎日の継続があなたの力になります
                 </h3>
                 <p className="text-gray-600 leading-relaxed">
                   深い議論は最初は難しく感じるかもしれませんが、継続することで自然と深い表現力が身につきます。
@@ -491,8 +491,10 @@ export default function LandingPage() {
                   投資対効果を実感できる設計
                 </span>
               </h2>
-              <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-                一度の深い対話で信頼関係が生まれ、ビジネスが好転する。その投資対効果を実感できる料金設定です。
+              <p className="text-base sm:text-lg md:text-xl text-gray-600 max-w-3xl mx-auto">
+                一度の深い対話で信頼関係が生まれ、<br />
+                ビジネスが好転する。<br />
+                その投資対効果を実感できる料金設定です。
               </p>
             </div>
           </FadeInUp>
@@ -772,11 +774,10 @@ export default function LandingPage() {
                   <h4 className="font-bold text-gray-900 mb-2">無料体験について</h4>
                   <p className="text-gray-700 text-sm leading-relaxed mb-2">
                     <span className="font-semibold">7日間の無料体験</span>で、すべての機能をフルにご利用いただけます。
-                    クレジットカードの登録は不要です。体験期間中に解約すれば、一切の費用はかかりません。
+                    クレジットカードの登録は不要です。
                   </p>
                   <p className="text-gray-700 text-sm leading-relaxed">
-                    <span className="font-semibold">7日間の無料体験終了後</span>、有料プラン（Basic: ¥2,980/月、Premium: ¥4,980/月）への自動課金は行われません。
-                    継続をご希望の場合のみ、お好みのプランをお選びいただけます。
+                    体験期間終了後に、課金の案内がきますので、その際にご自身でご判断ください。
                   </p>
                 </div>
               </div>
@@ -786,14 +787,14 @@ export default function LandingPage() {
       </section>
 
       {/* Trust & Story Section */}
-      <section className="py-20 px-6 bg-gradient-to-b from-indigo-50 to-white">
+      <section className="py-16 px-6 bg-gradient-to-b from-indigo-50 to-white">
         <div className="max-w-6xl mx-auto">
           <FadeInUp>
-            <div className="text-center mb-12">
+            <div className="text-center mb-8">
               <div className="inline-block px-4 py-2 bg-indigo-100 text-indigo-700 rounded-full text-sm font-bold mb-4">
                 信頼・実績
               </div>
-              <h2 className="text-4xl font-bold text-gray-900 mb-4">
+              <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-4">
                 開発者ストーリー
               </h2>
             </div>
@@ -801,8 +802,8 @@ export default function LandingPage() {
 
           <FadeInUp delay={0.2}>
             <div className="bg-white rounded-2xl p-10 shadow-xl border border-gray-200 max-w-4xl mx-auto">
-              <div className="flex items-start space-x-6">
-                <div className="w-20 h-20 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-full flex items-center justify-center flex-shrink-0">
+              <div className="flex flex-col items-center text-center">
+                <div className="w-20 h-20 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-full flex items-center justify-center mb-6">
                   <Briefcase className="w-10 h-10 text-white" />
                 </div>
                 <div>
