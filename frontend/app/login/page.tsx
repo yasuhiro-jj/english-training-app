@@ -56,41 +56,41 @@ export default function LoginPage() {
     };
 
     return (
-        <div className="min-h-screen bg-[#0a0c10] text-white overflow-hidden selection:bg-indigo-500/30 flex items-center justify-center font-sans tracking-tight">
+        <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 text-gray-900 overflow-hidden selection:bg-indigo-500/30 flex items-center justify-center font-sans tracking-tight">
             {/* Hero Background Overlay (Shared with Home) */}
             <div className="fixed inset-0 z-0">
                 <div
-                    className="absolute inset-0 bg-cover bg-center transition-transform duration-[20s] scale-110 motion-safe:animate-slow-zoom"
+                    className="absolute inset-0 bg-cover bg-center transition-transform duration-[20s] scale-110 motion-safe:animate-slow-zoom opacity-20"
                     style={{ backgroundImage: 'url("/hero-bg.png")' }}
                 />
-                <div className="absolute inset-0 bg-gradient-to-b from-[#0a0c10]/70 via-[#0a0c10]/50 to-[#0a0c10]" />
+                <div className="absolute inset-0 bg-gradient-to-b from-indigo-50/80 via-white/90 to-purple-50/80" />
 
                 {/* Animated Orbs */}
-                <div className="absolute top-1/3 left-1/4 w-[500px] h-[500px] bg-indigo-600/20 rounded-full blur-[120px] animate-pulse" />
-                <div className="absolute bottom-1/3 right-1/4 w-[500px] h-[500px] bg-blue-600/10 rounded-full blur-[120px] animate-pulse delay-700" />
+                <div className="absolute top-1/3 left-1/4 w-[500px] h-[500px] bg-indigo-200/30 rounded-full blur-[120px] animate-pulse" />
+                <div className="absolute bottom-1/3 right-1/4 w-[500px] h-[500px] bg-purple-200/20 rounded-full blur-[120px] animate-pulse delay-700" />
             </div>
 
             {/* Login Card - Glassmorphism */}
             <div className="relative z-10 w-full max-w-md px-6 animate-fade-in-up">
-                <div className="bg-white/5 border border-white/10 backdrop-blur-2xl rounded-[2.5rem] p-10 shadow-2xl">
+                <div className="bg-white/90 border border-indigo-200/50 backdrop-blur-xl rounded-[2.5rem] p-10 shadow-2xl">
                     <div className="text-center mb-10">
-                        <h1 className="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-white to-indigo-200 mb-2">
+                        <h1 className="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600 mb-2">
                             Welcome Back
                         </h1>
-                        <p className="text-indigo-100/60 text-sm font-medium">
+                        <p className="text-gray-600 text-sm font-medium">
                             Daily News English Training にログイン
                         </p>
                     </div>
 
                     {error && (
-                        <div className="mb-6 px-4 py-3 bg-red-500/20 border border-red-500/50 rounded-xl text-red-200 text-sm text-center animate-shake">
+                        <div className="mb-6 px-4 py-3 bg-red-100 border border-red-300 rounded-xl text-red-700 text-sm text-center animate-shake">
                             {error}
                         </div>
                     )}
 
                     <form onSubmit={handleSubmit} className="space-y-6">
                         <div className="space-y-2">
-                            <label className="text-xs font-bold text-indigo-300 uppercase tracking-widest px-1">
+                            <label className="text-xs font-bold text-gray-700 uppercase tracking-widest px-1">
                                 Email Address
                             </label>
                             <input
@@ -99,12 +99,12 @@ export default function LoginPage() {
                                 onChange={(e) => setEmail(e.target.value)}
                                 placeholder="you@example.com"
                                 required
-                                className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 text-white placeholder:text-white/20 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:bg-white/10 transition-all duration-300"
+                                className="w-full bg-white border border-gray-300 rounded-2xl px-6 py-4 text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-300"
                             />
                         </div>
 
                         <div className="space-y-2">
-                            <label className="text-xs font-bold text-indigo-300 uppercase tracking-widest px-1">
+                            <label className="text-xs font-bold text-gray-700 uppercase tracking-widest px-1">
                                 Password
                             </label>
                             <input
@@ -113,7 +113,7 @@ export default function LoginPage() {
                                 onChange={(e) => setPassword(e.target.value)}
                                 placeholder="••••••••"
                                 required
-                                className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 text-white placeholder:text-white/20 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:bg-white/10 transition-all duration-300"
+                                className="w-full bg-white border border-gray-300 rounded-2xl px-6 py-4 text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-300"
                             />
                         </div>
 
@@ -126,10 +126,10 @@ export default function LoginPage() {
                     </form>
 
                     <div className="mt-8 text-center text-sm">
-                        <span className="text-indigo-100/40">アカウントをお持ちでないですか？</span>
+                        <span className="text-gray-600">アカウントをお持ちでないですか？</span>
                         <Link
                             href="/signup"
-                            className="ml-2 text-indigo-300 hover:text-white font-bold transition-colors underline decoration-indigo-500/30 underline-offset-4"
+                            className="ml-2 text-indigo-600 hover:text-indigo-700 font-bold transition-colors underline decoration-indigo-500 underline-offset-4"
                         >
                             新規登録
                         </Link>
@@ -138,7 +138,7 @@ export default function LoginPage() {
 
                 {/* Home Link */}
                 <div className="mt-8 text-center">
-                    <Link href="/" className="text-indigo-100/30 hover:text-indigo-100/60 text-xs transition-colors">
+                    <Link href="/" className="text-gray-500 hover:text-gray-700 text-xs transition-colors">
                         ← ホームに戻る
                     </Link>
                 </div>

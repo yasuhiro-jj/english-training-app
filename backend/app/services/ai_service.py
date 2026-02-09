@@ -177,7 +177,7 @@ class AIService:
 
         prompt = f"""
 あなたは英会話教材のプロフェッショナルです。
-以下の日本語ニュースを元に、高度な語彙と自然な表現を用いた高品質な英語教材を1つ（中上級B2-C1レベル）作成してください。
+以下の日本語ニュースを元に、わかりやすく読みやすい英語教材を1つ（中級B1-B2レベル）作成してください。
 
 【元記事（日本語）】
 タイトル: {japanese_title}
@@ -186,14 +186,15 @@ class AIService:
 【作成要件】
 レッスンは以下の構成要素を必ず含めてください：
 1. **Header**: 英語タイトル、日付({today_str})、カテゴリー(News/Sports/Technologyなど)
-2. **Unlocking Word Meanings**: 記事内で使われる重要かつ高度な単語5-7個。
-   - word, pronunciation (IPA), type (v., n., adj.), definition (英語), example sentence
+2. **Unlocking Word Meanings**: 記事内で使われる重要な単語5-7個（中級レベルの語彙）。
+   - word, pronunciation (IPA), type (v., n., adj.), definition (英語、わかりやすく), example sentence
 3. **Article**: ニュース記事本文。
-   - 長さ: **最低300単語**（4-6段落構成で、論理的かつ詳細に執筆してください）
-   - レベル: B2-C1レベル（自然なコロケーション、多様な構文、高度な語彙を使用）
+   - 長さ: **約500文字（日本語換算）**（約300-400単語、3-4段落構成で、わかりやすく簡潔に執筆してください）
+   - レベル: B1-B2レベル（中級者にも理解しやすい語彙と表現を使用。複雑な構文は避け、シンプルで明確な文章にしてください）
+   - 重要: 難しい単語や表現は避け、日常的に使われる言葉を中心にしてください
 4. **Viewpoint Discussion**:
-   - **Discussion A**: コンテンツの詳細な理解に関する質問 (2-3問)
-   - **Discussion B**: 批判的思考や個人的な見解を深く掘り下げるための質問 (2-3問)
+   - **Discussion A**: コンテンツの理解に関する質問 (2-3問)
+   - **Discussion B**: 個人的な見解を聞く質問 (2-3問)
 
 【出力形式】
 以下のJSON形式のみを出力してください（必ず "lessons" キーを使用し、リスト内に1つのレッスンオブジェクトを含めてください）。
@@ -201,7 +202,7 @@ class AIService:
 {{
   "lessons": [
     {{
-      "title": "Sophisticated English Title",
+                    "title": "Clear and Simple English Title",
       "date": "{today_str}",
       "category": "News",
       "vocabulary": [
@@ -213,11 +214,11 @@ class AIService:
             "example": "A natural example sentence using the word..."
         }}
       ],
-      "content": "A detailed, high-quality article of at least 300 words...",
+      "content": "A clear and easy-to-read article of about 500 characters (300-400 words)...",
       "discussion_a": ["Q1", "Q2"],
       "discussion_b": ["Q1", "Q2"],
       "question": "Main Question to start the discussion",
-      "level": "B2-C1"
+      "level": "B1-B2"
     }}
   ]
 }}
@@ -228,7 +229,7 @@ class AIService:
         response = await self._require_client().chat.completions.create(
             model="gpt-4o-mini",
             messages=[
-                {"role": "system", "content": "You are a professional English education content creator. Output valid JSON with 'lessons' key containing a single high-quality lesson."},
+                {"role": "system", "content": "You are a professional English education content creator. Create easy-to-read lessons for intermediate learners (B1-B2 level). Use simple vocabulary and clear sentences. Output valid JSON with 'lessons' key containing a single lesson."},
                 {"role": "user", "content": prompt}
             ],
             temperature=0.7,

@@ -93,6 +93,13 @@ function SessionPageInner() {
     const [currentSentenceIndex, setCurrentSentenceIndex] = useState(0);
     const [sentences, setSentences] = useState<string[]>([]);
     const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+    const playbackIdRef = useRef(0);
+    const stopRequestedRef = useRef(false);
+    const sentencesRef = useRef<string[]>([]);
+
+    useEffect(() => {
+        sentencesRef.current = sentences;
+    }, [sentences]);
 
     const safeCancelSpeech = () => {
         try {
@@ -114,13 +121,15 @@ function SessionPageInner() {
     const splitIntoSentences = (text: string): string[] => {
         // 文末記号（. ! ?）で分割
         // 正規表現で文末記号とその後の空白を検出
+        // 改行も考慮して分割
+        const normalizedText = text.replace(/\n+/g, ' ').replace(/\s+/g, ' ').trim();
         const sentenceEndings = /([.!?]+)\s+/g;
         const sentences: string[] = [];
         let lastIndex = 0;
         let match;
         
-        while ((match = sentenceEndings.exec(text)) !== null) {
-            const sentence = text.substring(lastIndex, match.index + match[1].length).trim();
+        while ((match = sentenceEndings.exec(normalizedText)) !== null) {
+            const sentence = normalizedText.substring(lastIndex, match.index + match[1].length).trim();
             if (sentence.length > 0) {
                 sentences.push(sentence);
             }
@@ -128,67 +137,217 @@ function SessionPageInner() {
         }
         
         // 残りのテキストを追加
-        const remaining = text.substring(lastIndex).trim();
+        const remaining = normalizedText.substring(lastIndex).trim();
         if (remaining.length > 0) {
             sentences.push(remaining);
         }
         
-        return sentences.length > 0 ? sentences : [text]; // 文が見つからない場合は全文を返す
+        return sentences.length > 0 ? sentences : [normalizedText]; // 文が見つからない場合は全文を返す
+    };
+
+    const pickEnglishVoice = (voices: SpeechSynthesisVoice[]): SpeechSynthesisVoice | undefined => {
+        const isBad = (v: SpeechSynthesisVoice) =>
+            /eSpeak|Festival|flite/i.test(v.name || "");
+
+        const candidates = voices.filter((v) => v.lang?.startsWith("en") && !isBad(v));
+
+        // Prefer en-US first, then en-GB, then any en-*
+        const preferLang = (langPrefix: string) => candidates.filter((v) => v.lang?.startsWith(langPrefix));
+
+        const score = (v: SpeechSynthesisVoice) => {
+            const name = v.name || "";
+            // Heuristics: many browsers have higher quality voices labeled like these
+            if (/Google US English/i.test(name)) return 100;
+            if (/Google/i.test(name)) return 90;
+            if (/Microsoft/i.test(name)) return 80;
+            if (/Natural/i.test(name)) return 70;
+            if (v.localService === false) return 60;
+            return 50;
+        };
+
+        const byScoreDesc = (arr: SpeechSynthesisVoice[]) => [...arr].sort((a, b) => score(b) - score(a));
+
+        const us = byScoreDesc(preferLang("en-US"));
+        if (us.length) return us[0];
+        const gb = byScoreDesc(preferLang("en-GB"));
+        if (gb.length) return gb[0];
+        const any = byScoreDesc(candidates);
+        return any[0];
+    };
+
+    const getVoicesWithWait = async (synth: SpeechSynthesis): Promise<SpeechSynthesisVoice[]> => {
+        try {
+            const initial = synth.getVoices();
+            if (initial && initial.length > 0) return initial;
+        } catch {
+            // ignore
+        }
+
+        // Wait for onvoiceschanged (Chrome) but time out to avoid hanging
+        return await new Promise((resolve) => {
+            let done = false;
+            const finish = () => {
+                if (done) return;
+                done = true;
+                try {
+                    resolve(synth.getVoices() || []);
+                } catch {
+                    resolve([]);
+                }
+            };
+
+            const timer = setTimeout(() => {
+                synth.onvoiceschanged = null;
+                finish();
+            }, 1200);
+
+            synth.onvoiceschanged = () => {
+                clearTimeout(timer);
+                synth.onvoiceschanged = null;
+                finish();
+            };
+        });
+    };
+
+    const buildSpeechChunk = (startIndex: number, maxChars = 260, maxSentences = 3) => {
+        const list = sentencesRef.current || [];
+        let text = "";
+        let idx = Math.max(0, startIndex);
+        let added = 0;
+
+        while (idx < list.length && added < maxSentences) {
+            const s = (list[idx] || "").trim();
+            if (!s) {
+                idx += 1;
+                continue;
+            }
+            const candidate = text ? `${text} ${s}` : s;
+            // Always include at least 1 sentence
+            if (added > 0 && candidate.length > maxChars) break;
+            text = candidate;
+            idx += 1;
+            added += 1;
+        }
+
+        return { text, nextIndex: idx };
     };
 
     // Read Aloud コントロール関数
     const playFromSentence = (index: number) => {
         if (!currentLesson || sentences.length === 0) return;
-        
+
+        // 直前の再生を無効化（onendの連鎖を止める）
+        playbackIdRef.current += 1;
+        stopRequestedRef.current = false;
+
         safeCancelSpeech();
         setIsPlaying(true);
         setIsPaused(false);
-        setCurrentSentenceIndex(index);
+        setCurrentSentenceIndex(Math.max(0, Math.min(index, sentences.length - 1)));
 
-        // 指定された文から最後までを結合して再生
-        // NOTE: ローマ字変換 + 長文結合はモバイルで重くなりやすい。
-        // まずは原文を読み上げる（必要なら「現在の1文のみ」+変換に変更する）。
-        const textToSpeak = sentences.slice(index).join(' ');
-        const textWithRomaji = textToSpeak;
-        
-        const UtteranceCtor = (typeof window !== 'undefined' ? (window as any).SpeechSynthesisUtterance : null);
-        if (!UtteranceCtor) {
-            console.warn('[Session] SpeechSynthesisUtterance is not available in this browser');
-            setIsPlaying(false);
-            setIsPaused(false);
-            return;
-        }
+        const playbackId = playbackIdRef.current;
 
-        const utterance = new UtteranceCtor(textWithRomaji) as SpeechSynthesisUtterance;
-        utterance.lang = 'en-US';
-        utterance.rate = 0.9;
-        
-        utterance.onend = () => {
-            setIsPlaying(false);
-            setIsPaused(false);
-            setCurrentSentenceIndex(sentences.length);
-        };
-        
-        utterance.onerror = () => {
-            setIsPlaying(false);
-            setIsPaused(false);
-        };
-        
-        utteranceRef.current = utterance;
-        try {
+        const speakSentence = (i: number) => {
+            if (stopRequestedRef.current) return;
+            if (playbackId !== playbackIdRef.current) return;
+
+            const list = sentencesRef.current;
+            if (!list || list.length === 0) return;
+
+            if (i >= list.length) {
+                setIsPlaying(false);
+                setIsPaused(false);
+                setCurrentSentenceIndex(list.length);
+                return;
+            }
+
+            const { text, nextIndex } = buildSpeechChunk(i);
+            if (!text) {
+                setCurrentSentenceIndex(Math.min(list.length, i + 1));
+                speakSentence(i + 1);
+                return;
+            }
+
+            const UtteranceCtor = (typeof window !== 'undefined' ? (window as any).SpeechSynthesisUtterance : null);
+            if (!UtteranceCtor) {
+                console.warn('[Session] SpeechSynthesisUtterance is not available in this browser');
+                setIsPlaying(false);
+                setIsPaused(false);
+                return;
+            }
+
             const synth = (typeof window !== 'undefined' ? (window as any).speechSynthesis : null);
-            if (synth && typeof synth.speak === 'function') {
-                synth.speak(utterance);
-            } else {
+            if (!synth || typeof synth.speak !== 'function') {
                 console.warn('[Session] speechSynthesis.speak is not available in this browser');
                 setIsPlaying(false);
                 setIsPaused(false);
+                return;
             }
-        } catch (e) {
-            console.warn('[Session] speechSynthesis.speak failed:', e);
-            setIsPlaying(false);
-            setIsPaused(false);
-        }
+
+            const utterance = new UtteranceCtor(text) as SpeechSynthesisUtterance;
+            // Naturalness tuning: sentence-by-sentence + modest pace
+            utterance.lang = 'en-US';
+            utterance.rate = 0.92;
+            utterance.pitch = 1.0;
+            utterance.volume = 1.0;
+
+            // Ensure we have English voices BEFORE speaking; otherwise it often defaults to a JP voice.
+            (async () => {
+                try {
+                    const voices = await getVoicesWithWait(synth);
+                    const v = pickEnglishVoice(voices);
+                    if (v) utterance.voice = v;
+                } catch {
+                    // ignore
+                }
+            })();
+
+            utterance.onend = () => {
+                if (stopRequestedRef.current) return;
+                if (playbackId !== playbackIdRef.current) return;
+
+                setCurrentSentenceIndex(nextIndex);
+
+                if (nextIndex >= (sentencesRef.current?.length || 0)) {
+                    setIsPlaying(false);
+                    setIsPaused(false);
+                    return;
+                }
+
+                // Small pause between chunks improves naturalness
+                setTimeout(() => speakSentence(nextIndex), 220);
+            };
+
+            utterance.onerror = (e) => {
+                console.error('[Session] Speech synthesis error:', e);
+                setIsPlaying(false);
+                setIsPaused(false);
+            };
+
+            utteranceRef.current = utterance;
+
+            try {
+                // If voices are not ready, speaking immediately tends to use the wrong default voice.
+                // Wait a tick so the async voice picker above has a chance to set utterance.voice.
+                setTimeout(() => {
+                    if (stopRequestedRef.current) return;
+                    if (playbackId !== playbackIdRef.current) return;
+                    try {
+                        synth.speak(utterance);
+                    } catch (e) {
+                        console.warn('[Session] speechSynthesis.speak failed:', e);
+                        setIsPlaying(false);
+                        setIsPaused(false);
+                    }
+                }, 60);
+            } catch (e) {
+                console.warn('[Session] speechSynthesis.speak failed:', e);
+                setIsPlaying(false);
+                setIsPaused(false);
+            }
+        };
+
+        speakSentence(Math.max(0, Math.min(index, sentences.length - 1)));
     };
 
     const pauseReading = () => {
@@ -217,6 +376,8 @@ function SessionPageInner() {
     };
 
     const stopReading = () => {
+        stopRequestedRef.current = true;
+        playbackIdRef.current += 1;
         safeCancelSpeech();
         setIsPlaying(false);
         setIsPaused(false);
