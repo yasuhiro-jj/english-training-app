@@ -196,10 +196,13 @@ function SessionPageInner() {
                 }
             };
 
+            // Increase timeout for mobile browsers which may take longer to load voices
+            const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+            const timeout = isMobile ? 2000 : 1200;
             const timer = setTimeout(() => {
                 synth.onvoiceschanged = null;
                 finish();
-            }, 1200);
+            }, timeout);
 
             synth.onvoiceschanged = () => {
                 clearTimeout(timer);
@@ -235,6 +238,14 @@ function SessionPageInner() {
     // Read Aloud コントロール関数
     const playFromSentence = (index: number) => {
         if (!currentLesson || sentences.length === 0) return;
+
+        // Check if speech synthesis is available
+        const synth = (typeof window !== 'undefined' ? (window as any).speechSynthesis : null);
+        if (!synth || typeof synth.speak !== 'function') {
+            console.warn('[Session] speechSynthesis is not available');
+            alert('このブラウザでは音声読み上げ機能が利用できません。');
+            return;
+        }
 
         // 直前の再生を無効化（onendの連鎖を止める）
         playbackIdRef.current += 1;
@@ -291,17 +302,6 @@ function SessionPageInner() {
             utterance.pitch = 1.0;
             utterance.volume = 1.0;
 
-            // Ensure we have English voices BEFORE speaking; otherwise it often defaults to a JP voice.
-            (async () => {
-                try {
-                    const voices = await getVoicesWithWait(synth);
-                    const v = pickEnglishVoice(voices);
-                    if (v) utterance.voice = v;
-                } catch {
-                    // ignore
-                }
-            })();
-
             utterance.onend = () => {
                 if (stopRequestedRef.current) return;
                 if (playbackId !== playbackIdRef.current) return;
@@ -326,12 +326,20 @@ function SessionPageInner() {
 
             utteranceRef.current = utterance;
 
-            try {
-                // If voices are not ready, speaking immediately tends to use the wrong default voice.
-                // Wait a tick so the async voice picker above has a chance to set utterance.voice.
-                setTimeout(() => {
+            // Ensure we have English voices BEFORE speaking; otherwise it often defaults to a JP voice.
+            // For mobile browsers, we need to wait for voices to be loaded before speaking.
+            (async () => {
+                try {
+                    const voices = await getVoicesWithWait(synth);
+                    const v = pickEnglishVoice(voices);
+                    if (v) utterance.voice = v;
+                    
+                    // Wait a bit more for mobile browsers to ensure voice is set
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                    
                     if (stopRequestedRef.current) return;
                     if (playbackId !== playbackIdRef.current) return;
+                    
                     try {
                         synth.speak(utterance);
                     } catch (e) {
@@ -339,12 +347,18 @@ function SessionPageInner() {
                         setIsPlaying(false);
                         setIsPaused(false);
                     }
-                }, 60);
-            } catch (e) {
-                console.warn('[Session] speechSynthesis.speak failed:', e);
-                setIsPlaying(false);
-                setIsPaused(false);
-            }
+                } catch (e) {
+                    console.warn('[Session] Failed to get voices or speak:', e);
+                    // Fallback: try to speak without waiting for voices
+                    try {
+                        synth.speak(utterance);
+                    } catch (speakError) {
+                        console.warn('[Session] speechSynthesis.speak failed (fallback):', speakError);
+                        setIsPlaying(false);
+                        setIsPaused(false);
+                    }
+                }
+            })();
         };
 
         speakSentence(Math.max(0, Math.min(index, sentences.length - 1)));
