@@ -99,6 +99,7 @@ function SessionPageInner() {
     const stopRequestedRef = useRef(false);
     const pauseRequestedRef = useRef(false);
     const pausedSentenceIndexRef = useRef<number | null>(null);
+    const currentSentenceIndexRef = useRef(0);
     const sentencesRef = useRef<string[]>([]);
     const voicesCacheRef = useRef<SpeechSynthesisVoice[] | null>(null);
     const speakWatchdogRef = useRef<number | null>(null);
@@ -309,7 +310,9 @@ function SessionPageInner() {
         setIsStarting(true);
         setIsPlaying(false);
         setIsPaused(false);
-        setCurrentSentenceIndex(Math.max(0, Math.min(index, sentences.length - 1)));
+        const startIndex = Math.max(0, Math.min(index, sentences.length - 1));
+        setCurrentSentenceIndex(startIndex);
+        currentSentenceIndexRef.current = startIndex;
 
         const playbackId = playbackIdRef.current;
 
@@ -320,6 +323,9 @@ function SessionPageInner() {
 
             const list = sentencesRef.current;
             if (!list || list.length === 0) return;
+
+            // 再生中の文インデックスをrefで同期的に保持（一時停止時に正しい位置を取得するため）
+            currentSentenceIndexRef.current = i;
 
             if (i >= list.length) {
                 setIsStarting(false);
@@ -463,7 +469,7 @@ function SessionPageInner() {
             }, 900);
         };
 
-        speakSentence(Math.max(0, Math.min(index, sentences.length - 1)));
+        speakSentence(startIndex);
     };
 
     const pauseReading = () => {
@@ -474,8 +480,8 @@ function SessionPageInner() {
             const synth = getSpeechSynthesis();
             // pause/resumeは多くのブラウザで信頼性が低いため、cancelして現在位置を保持する方法に変更
             // これにより、再開時に確実に現在位置から再開できる
-            // 現在の文のインデックスを ref に保存（state のクロージャ問題を回避）
-            pausedSentenceIndexRef.current = currentSentenceIndex;
+            // 現在の文のインデックスを ref に保存（state は非同期更新のため、同期的に更新される ref を使用）
+            pausedSentenceIndexRef.current = currentSentenceIndexRef.current;
             pauseRequestedRef.current = true;
             safeCancelSpeech();
             setIsPaused(true);
@@ -484,7 +490,7 @@ function SessionPageInner() {
             utteranceRef.current = null;
         } catch {
             // エラー時も現在位置を保持して停止
-            pausedSentenceIndexRef.current = currentSentenceIndex;
+            pausedSentenceIndexRef.current = currentSentenceIndexRef.current;
             pauseRequestedRef.current = true;
             safeCancelSpeech();
             setIsPaused(true);
@@ -497,10 +503,10 @@ function SessionPageInner() {
         // 一時停止中の場合のみ再開
         if (!isPaused) return;
         // 一時停止時に保存した文のインデックスから再開
-        // pausedSentenceIndexRef が null の場合は、現在の currentSentenceIndex を使用
+        // pausedSentenceIndexRef が null の場合は、ref の現在値を使用
         const resumeIndex = pausedSentenceIndexRef.current !== null 
             ? pausedSentenceIndexRef.current 
-            : currentSentenceIndex;
+            : currentSentenceIndexRef.current;
         pauseRequestedRef.current = false;
         pausedSentenceIndexRef.current = null;
         setIsPaused(false);
@@ -511,6 +517,7 @@ function SessionPageInner() {
         stopRequestedRef.current = true;
         pauseRequestedRef.current = false;
         pausedSentenceIndexRef.current = null;
+        currentSentenceIndexRef.current = 0;
         playbackIdRef.current += 1;
         clearSpeakWatchdog();
         safeCancelSpeech();
