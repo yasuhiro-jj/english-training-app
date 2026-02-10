@@ -13,6 +13,7 @@ export default function DashboardPage() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [showTrialExpiredNotification, setShowTrialExpiredNotification] = useState(false);
+    const [selectedLevel, setSelectedLevel] = useState(2); // デフォルトは中級 (B1-B2)
 
     useEffect(() => {
         if (user) {
@@ -67,15 +68,29 @@ export default function DashboardPage() {
 
                 {/* Action Cards */}
                 <div className="mb-12 grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {/* Lesson Generation Card - Hidden for now */}
+                    {/* Lesson Generation Card - Hidden as per user request */}
+                    {/*
                     <div
-                        onClick={() => router.push('/lesson')}
-                        className="hidden relative overflow-hidden bg-gradient-to-br from-emerald-600 to-teal-700 rounded-3xl p-8 shadow-2xl shadow-emerald-500/20 cursor-pointer group hover:scale-[1.02] transition-all duration-300"
+                        onClick={() => router.push(`/lesson?level=${selectedLevel}`)}
+                        className="relative overflow-hidden bg-gradient-to-br from-emerald-600 to-teal-700 rounded-3xl p-8 shadow-2xl shadow-emerald-500/20 cursor-pointer group hover:scale-[1.02] transition-all duration-300"
                     >
                         <div className="relative z-10 flex flex-col gap-4">
                             <div>
                                 <h2 className="text-2xl font-black text-white mb-2 italic">Daily News English</h2>
-                                <p className="text-emerald-100 text-sm font-medium opacity-80 uppercase tracking-widest">Generate lesson from news articles</p>
+                                <p className="text-emerald-100 text-sm font-medium opacity-80 uppercase tracking-widest mb-4">Generate lesson from news articles</p>
+                                <div className="flex items-center space-x-2 mb-4">
+                                    <label htmlFor="lesson-level" className="text-white font-medium">難易度:</label>
+                                    <select
+                                        id="lesson-level"
+                                        className="bg-white/20 backdrop-blur-md px-4 py-2 rounded-xl border border-white/30 text-white focus:ring-2 focus:ring-emerald-300 focus:border-transparent transition-all"
+                                        value={selectedLevel}
+                                        onChange={(e) => setSelectedLevel(Number(e.target.value))}
+                                    >
+                                        <option value={1} className="bg-emerald-700 text-white">1 (初心者)</option>
+                                        <option value={2} className="bg-emerald-700 text-white">2 (中級)</option>
+                                        <option value={3} className="bg-emerald-700 text-white">3 (上級)</option>
+                                    </select>
+                                </div>
                             </div>
                             <div className="flex items-center">
                                 <div className="bg-white/20 backdrop-blur-md px-6 py-3 rounded-2xl border border-white/30 group-hover:bg-white/30 transition-colors">
@@ -88,20 +103,38 @@ export default function DashboardPage() {
                                 </div>
                             </div>
                         </div>
-                        {/* Background Decoration */}
-                        <div className="absolute -right-12 -bottom-12 w-64 h-64 bg-white/10 rounded-full blur-3xl group-hover:bg-white/20 transition-all"></div>
-                        <div className="absolute left-1/2 top-0 w-32 h-32 bg-emerald-400/20 rounded-full blur-2xl"></div>
+                        <div className="absolute -right-8 -bottom-8 w-64 h-64 bg-white/10 rounded-full blur-3xl group-hover:bg-white/20 transition-all"></div>
+                        <div className="absolute left-1/2 -top-8 w-32 h-32 bg-emerald-400/20 rounded-full blur-2xl"></div>
                     </div>
+                    */}
 
                     {/* Training Session Card */}
                     <div
-                        onClick={() => router.push('/session')}
+                        onClick={() => router.push(`/session?level=${selectedLevel}`)}
                         className="relative overflow-hidden bg-gradient-to-br from-indigo-600 to-purple-700 rounded-3xl p-8 shadow-2xl shadow-indigo-500/20 cursor-pointer group hover:scale-[1.02] transition-all duration-300"
                     >
                         <div className="relative z-10 flex flex-col gap-4">
                             <div>
                                 <h2 className="text-2xl font-black text-white mb-2 italic">トレーニング開始</h2>
-                                <p className="text-indigo-100 text-sm font-medium opacity-80 uppercase tracking-widest">Start your conversation training</p>
+                                <p className="text-indigo-100 text-sm font-medium opacity-80 uppercase tracking-widest mb-4">Start your conversation training</p>
+                                <div className="flex items-center space-x-2 mb-4" onClick={(e) => e.stopPropagation()}>
+                                    <label htmlFor="session-level" className="text-white font-medium text-sm">難易度:</label>
+                                    <select
+                                        id="session-level"
+                                        className="bg-white/20 backdrop-blur-md px-4 py-2 rounded-xl border border-white/30 text-white focus:ring-2 focus:ring-indigo-300 focus:border-transparent transition-all cursor-pointer z-10 relative"
+                                        value={selectedLevel}
+                                        onChange={(e) => {
+                                            e.stopPropagation();
+                                            setSelectedLevel(Number(e.target.value));
+                                        }}
+                                        onClick={(e) => e.stopPropagation()}
+                                        style={{ minWidth: '150px' }}
+                                    >
+                                        <option value={1} className="bg-indigo-700 text-white">初心者</option>
+                                        <option value={2} className="bg-indigo-700 text-white">中級者</option>
+                                        <option value={3} className="bg-indigo-700 text-white">上級者</option>
+                                    </select>
+                                </div>
                             </div>
                             <div className="flex items-center">
                                 <div className="bg-white/20 backdrop-blur-md px-6 py-3 rounded-2xl border border-white/30 group-hover:bg-white/30 transition-colors">
@@ -273,7 +306,7 @@ export default function DashboardPage() {
 
                 <div className="mt-12 text-center">
                     <button
-                        onClick={() => router.push('/session')}
+                        onClick={() => router.push(`/session?level=${selectedLevel}`)}
                         className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 px-12 rounded-full shadow-2xl shadow-indigo-500/20 transform transition hover:scale-105 active:scale-95"
                     >
                         START TRAINING
