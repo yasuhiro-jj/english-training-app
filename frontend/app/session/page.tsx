@@ -328,6 +328,7 @@ function SessionPageInner() {
             currentSentenceIndexRef.current = i;
 
             if (i >= list.length) {
+                currentSentenceIndexRef.current = list.length;
                 setIsStarting(false);
                 setIsPlaying(false);
                 setIsPaused(false);
@@ -337,8 +338,10 @@ function SessionPageInner() {
 
             const { text, nextIndex } = buildSpeechChunk(i);
             if (!text) {
-                setCurrentSentenceIndex(Math.min(list.length, i + 1));
-                speakSentence(i + 1);
+                const nextIdx = Math.min(list.length, i + 1);
+                currentSentenceIndexRef.current = nextIdx;
+                setCurrentSentenceIndex(nextIdx);
+                speakSentence(nextIdx);
                 return;
             }
 
@@ -371,6 +374,8 @@ function SessionPageInner() {
                 if (playbackId !== playbackIdRef.current) return;
                 clearSpeakWatchdog();
 
+                // ref も同期的に更新（一時停止時に正しい位置を取得するため）
+                currentSentenceIndexRef.current = nextIndex;
                 setCurrentSentenceIndex(nextIndex);
 
                 if (nextIndex >= (sentencesRef.current?.length || 0)) {
@@ -409,6 +414,8 @@ function SessionPageInner() {
             utterance.onstart = () => {
                 // iOS などで start が発火しないケースの検知にも使う
                 clearSpeakWatchdog();
+                // 実際に読み上げが開始された時点で、現在の文インデックスをrefに保存
+                currentSentenceIndexRef.current = i;
                 setIsStarting(false);
                 setIsPlaying(true);
                 setIsPaused(false);
