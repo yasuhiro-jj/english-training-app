@@ -90,6 +90,7 @@ function SessionPageInner() {
     // Read Aloud コントロール用の状態
     const [isPlaying, setIsPlaying] = useState(false);
     const [isPaused, setIsPaused] = useState(false);
+    const [isStarting, setIsStarting] = useState(false);
     const [currentSentenceIndex, setCurrentSentenceIndex] = useState(0);
     const [sentences, setSentences] = useState<string[]>([]);
     const [readAloudError, setReadAloudError] = useState('');
@@ -300,7 +301,9 @@ function SessionPageInner() {
 
         clearSpeakWatchdog();
         safeCancelSpeech();
-        setIsPlaying(true);
+        // Start as "starting" until onstart fires (important for mobile UX)
+        setIsStarting(true);
+        setIsPlaying(false);
         setIsPaused(false);
         setCurrentSentenceIndex(Math.max(0, Math.min(index, sentences.length - 1)));
 
@@ -314,6 +317,7 @@ function SessionPageInner() {
             if (!list || list.length === 0) return;
 
             if (i >= list.length) {
+                setIsStarting(false);
                 setIsPlaying(false);
                 setIsPaused(false);
                 setCurrentSentenceIndex(list.length);
@@ -359,6 +363,7 @@ function SessionPageInner() {
                 setCurrentSentenceIndex(nextIndex);
 
                 if (nextIndex >= (sentencesRef.current?.length || 0)) {
+                    setIsStarting(false);
                     setIsPlaying(false);
                     setIsPaused(false);
                     return;
@@ -371,6 +376,7 @@ function SessionPageInner() {
             utterance.onerror = (e) => {
                 console.error('[Session] Speech synthesis error:', e);
                 clearSpeakWatchdog();
+                setIsStarting(false);
                 setIsPlaying(false);
                 setIsPaused(false);
                 setReadAloudError('音読中にエラーが発生しました。別ブラウザ（Safari/Chrome）でお試しください。');
@@ -379,6 +385,9 @@ function SessionPageInner() {
             utterance.onstart = () => {
                 // iOS などで start が発火しないケースの検知にも使う
                 clearSpeakWatchdog();
+                setIsStarting(false);
+                setIsPlaying(true);
+                setIsPaused(false);
             };
 
             utteranceRef.current = utterance;
@@ -409,6 +418,7 @@ function SessionPageInner() {
                 synth.speak(utterance);
             } catch (e) {
                 console.warn('[Session] speechSynthesis.speak failed:', e);
+                setIsStarting(false);
                 setIsPlaying(false);
                 setIsPaused(false);
                 setReadAloudError('音読を開始できませんでした。スマホの場合は「消音解除」や音量、または別ブラウザ（Safari/Chrome）をお試しください。');
@@ -422,6 +432,7 @@ function SessionPageInner() {
                 if (playbackId !== playbackIdRef.current) return;
                 try {
                     if (!synth.speaking && !synth.pending) {
+                        setIsStarting(false);
                         setIsPlaying(false);
                         setIsPaused(false);
                         setReadAloudError('音読が開始できませんでした。スマホの場合は「消音解除」や音量、または別ブラウザ（Safari/Chrome）をお試しください。');
@@ -437,6 +448,7 @@ function SessionPageInner() {
 
     const pauseReading = () => {
         // speaking中のみpause（paused中はresumeへ）
+        if (isStarting) return;
         if (!isPlaying || isPaused) return;
         try {
             const synth = getSpeechSynthesis();
@@ -465,6 +477,7 @@ function SessionPageInner() {
         playbackIdRef.current += 1;
         clearSpeakWatchdog();
         safeCancelSpeech();
+        setIsStarting(false);
         setIsPlaying(false);
         setIsPaused(false);
         utteranceRef.current = null;
@@ -817,7 +830,7 @@ function SessionPageInner() {
                                         {/* 巻き戻しボタン */}
                                         <button
                                             onClick={rewindSentence}
-                                            disabled={!isPlaying && currentSentenceIndex === 0}
+                                            disabled={isStarting || (!isPlaying && currentSentenceIndex === 0)}
                                             className="flex items-center justify-center w-10 h-10 text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 rounded-full text-sm font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed"
                                             title="巻き戻し"
                                         >
@@ -829,8 +842,13 @@ function SessionPageInner() {
                                         {/* 再生/停止ボタン */}
                                         <button
                                             onClick={() => {
-                                                if (!isPlaying) {
+                                                if (!isPlaying && !isStarting) {
                                                     playFromSentence(currentSentenceIndex);
+                                                    return;
+                                                }
+                                                if (isStarting) {
+                                                    // If starting but no audio yet, allow user to cancel
+                                                    stopReading();
                                                     return;
                                                 }
                                                 if (isPaused) {
@@ -841,7 +859,15 @@ function SessionPageInner() {
                                             }}
                                             className="flex items-center space-x-2 text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-4 py-2 rounded-full text-sm font-semibold transition"
                                         >
-                                            {isPlaying ? (
+                                            {isStarting ? (
+                                                <>
+                                                    <svg className="animate-spin w-5 h-5" viewBox="0 0 24 24" fill="none">
+                                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+                                                    </svg>
+                                                    <span>準備中…</span>
+                                                </>
+                                            ) : isPlaying ? (
                                                 <>
                                                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -867,7 +893,7 @@ function SessionPageInner() {
                                         {/* 停止（リセット）ボタン */}
                                         <button
                                             onClick={stopReading}
-                                            disabled={!isPlaying}
+                                            disabled={!isPlaying && !isStarting}
                                             className="flex items-center justify-center w-10 h-10 text-gray-600 hover:text-gray-800 bg-gray-50 hover:bg-gray-100 rounded-full text-sm font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed"
                                             title="停止"
                                         >
@@ -880,7 +906,7 @@ function SessionPageInner() {
                                         {/* 早送りボタン */}
                                         <button
                                             onClick={forwardSentence}
-                                            disabled={!isPlaying && currentSentenceIndex >= sentences.length - 1}
+                                            disabled={isStarting || (!isPlaying && currentSentenceIndex >= sentences.length - 1)}
                                             className="flex items-center justify-center w-10 h-10 text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 rounded-full text-sm font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed"
                                             title="早送り"
                                         >
