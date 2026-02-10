@@ -104,8 +104,8 @@ const authenticatedFetch = async (url: string, options: RequestInit = {}) => {
 };
 
 export const api = {
-    async generateLessons(): Promise<LessonGenerateResponse> {
-        const response = await authenticatedFetch(`${API_URL}/api/session/generate`, {
+    async generateLessons(level: number = 2): Promise<LessonGenerateResponse> {
+        const response = await authenticatedFetch(`${API_URL}/api/session/generate?level=${level}`, {
             method: 'GET',
         });
         if (!response.ok) {
@@ -127,8 +127,8 @@ export const api = {
         return response.json();
     },
 
-    async generateLessonAuto(): Promise<LessonGenerateResponse> {
-        const response = await authenticatedFetch(`${API_URL}/api/lesson/generate/auto`, {
+    async generateLessonAuto(level: number = 2): Promise<LessonGenerateResponse> {
+        const response = await authenticatedFetch(`${API_URL}/api/lesson/generate/auto?level=${level}`, {
             method: 'GET',
         });
         if (!response.ok) {
