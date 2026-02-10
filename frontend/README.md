@@ -40,6 +40,10 @@ npm run dev
 ```powershell
 cd "c:\Users\PC user\OneDrive\Desktop\udemy-langchain\english-training-app-clean\frontend"
 npm run dev
+
+
+# プロジェクトルートに移動
+cd "c:\Users\PC user\OneDrive\Desktop\udemy-langchain\english-training-app-clean"
 ```
 
 cd "c:\Users\PC user\OneDrive\Desktop\udemy-langchain\english-training-app-clean\backend"

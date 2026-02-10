@@ -19,7 +19,8 @@ logger = logging.getLogger(__name__)
 @router.post("/generate", response_model=LessonGenerateResponse)
 async def generate_lesson(
     request: LessonGenerateRequest,
-    user: dict = Depends(get_current_user)
+    user: dict = Depends(get_current_user),
+    level: int = 2
 ):
     """
     Daily News Englishレッスンを生成（URL指定版）
@@ -45,7 +46,8 @@ async def generate_lesson(
         logger.info("レッスン生成開始")
         lessons = await ai_service.generate_english_lesson(
             japanese_content=article["content"],
-            japanese_title=article["title"]
+            japanese_title=article["title"],
+            level=level
         )
         
         if not lessons:
@@ -100,7 +102,7 @@ async def generate_lesson(
 
 
 @router.get("/generate/auto", response_model=LessonGenerateResponse)
-async def generate_lesson_auto(user: dict = Depends(get_current_user)):
+async def generate_lesson_auto(user: dict = Depends(get_current_user), level: int = 2):
     """
     自動でニュース記事を取得してレッスンを生成（URL指定なし）
     
@@ -125,7 +127,8 @@ async def generate_lesson_auto(user: dict = Depends(get_current_user)):
         logger.info("レッスン生成開始")
         lessons = await ai_service.generate_english_lesson(
             japanese_content=article["content"],
-            japanese_title=article["title"]
+            japanese_title=article["title"],
+            level=level
         )
         
         if not lessons:

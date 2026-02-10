@@ -6,7 +6,44 @@ import json
 
 class AIService:
     """OpenAI API連携サービス"""
-    
+
+    _LEVEL_MAPPING = {
+        1: "A1-A2 (Beginner)",
+        2: "B1-B2 (Intermediate)",
+        3: "B2-C1 (Advanced)",
+    }
+
+    def _level_constraints(self, level: int) -> Dict[str, str]:
+        """
+        難易度に応じた制約を返す（プロンプト用）。
+        levelは 1=初心者, 2=中級, 3=上級 を想定。
+        """
+        if level == 1:
+            return {
+                "cefr": "A1-A2",
+                "article_words": "150-200 words",
+                "style": (
+                    "Use very short sentences (8-12 words average). Prefer present simple. "
+                    "Avoid idioms, phrasal verbs, and rare words. Avoid abstract nouns. "
+                    "Use very common verbs (get, make, go, have, take, want, need). "
+                    "Do NOT use advanced linking words like: however, therefore, moreover, consequently."
+                ),
+                "vocab": "5-7 easy, high-frequency words (A1-A2). Keep definitions very simple.",
+            }
+        if level == 2:
+            return {
+                "cefr": "B1-B2",
+                "article_words": "200-260 words",
+                "style": "Use clear sentences. Avoid overly complex clauses. Use common collocations. Keep it readable.",
+                "vocab": "5-7 useful words (B1-B2). Definitions should be clear and learner-friendly.",
+            }
+        # default: level 3
+        return {
+            "cefr": "B2-C1",
+            "article_words": "260-320 words",
+            "style": "Use natural but not overly academic English. Use a mix of sentence structures, but keep it comprehensible.",
+            "vocab": "5-7 advanced but practical words (B2-C1). Definitions should be precise but understandable.",
+        }
     def __init__(self):
         api_key = os.getenv("OPENAI_API_KEY")
         # 起動時に環境変数が未設定でもサーバー全体が落ちないようにする
@@ -151,7 +188,7 @@ class AIService:
             print(f"Error summarizing article: {e}")
             return article_content[:200] + "..."
 
-    async def generate_english_lesson(self, japanese_content: str, japanese_title: str) -> List[Dict]:
+    async def generate_english_lesson(self, japanese_content: str, japanese_title: str, level: int = 2, length: str = "約500文字（日本語換算）") -> List[Dict]:
         """
         日本語のニュース記事から1つの高品質な英語レッスン（記事＋質問）を生成
         Format: RareJob DNA Style (Vocab, Article, Discussion A/B)
@@ -175,9 +212,17 @@ class AIService:
         from datetime import datetime
         today_str = datetime.now().strftime("Posted %B %d, %Y")
 
+        level_str = self._LEVEL_MAPPING.get(level, "B1-B2 (Intermediate)")
+        c = self._level_constraints(level)
+
         prompt = f"""
 あなたは英会話教材のプロフェッショナルです。
-以下の日本語ニュースを元に、わかりやすく読みやすい英語教材を1つ（中級B1-B2レベル）作成してください。
+以下の日本語ニュースを元に、わかりやすく読みやすい英語教材を1つ作成してください。
+
+【難易度指定（最重要）】
+- 学習者レベル: {level}（1=初心者 / 2=中級 / 3=上級）
+- CEFR目安: {c["cefr"]}（必ずこのレベルに合わせること）
+- 文体: {c["style"]}
 
 【元記事（日本語）】
 タイトル: {japanese_title}
@@ -186,12 +231,12 @@ class AIService:
 【作成要件】
 レッスンは以下の構成要素を必ず含めてください：
 1. **Header**: 英語タイトル、日付({today_str})、カテゴリー(News/Sports/Technologyなど)
-2. **Unlocking Word Meanings**: 記事内で使われる重要な単語5-7個（中級レベルの語彙）。
+2. **Unlocking Word Meanings**: {c["vocab"]}
    - word, pronunciation (IPA), type (v., n., adj.), definition (英語、わかりやすく), example sentence
 3. **Article**: ニュース記事本文。
-   - 長さ: **約500文字（日本語換算）**（約300-400単語、3-4段落構成で、わかりやすく簡潔に執筆してください）
-   - レベル: B1-B2レベル（中級者にも理解しやすい語彙と表現を使用。複雑な構文は避け、シンプルで明確な文章にしてください）
-   - 重要: 難しい単語や表現は避け、日常的に使われる言葉を中心にしてください
+   - 長さ: **{c["article_words"]}**（3-4段落構成で、わかりやすく簡潔に執筆してください）
+   - レベル: CEFR {c["cefr"]} に必ず合わせる
+   - 重要: レベル不一致（難しすぎ/易しすぎ）はNG。特に初心者は簡単な語彙・文法のみで書くこと。
 4. **Viewpoint Discussion**:
    - **Discussion A**: コンテンツの理解に関する質問 (2-3問)
    - **Discussion B**: 個人的な見解を聞く質問 (2-3問)
@@ -214,11 +259,11 @@ class AIService:
             "example": "A natural example sentence using the word..."
         }}
       ],
-      "content": "A clear and easy-to-read article of about 500 characters (300-400 words)...",
+      "content": "Article body...",
       "discussion_a": ["Q1", "Q2"],
       "discussion_b": ["Q1", "Q2"],
       "question": "Main Question to start the discussion",
-      "level": "B1-B2"
+      "level": "{level}"
     }}
   ]
 }}
@@ -229,11 +274,11 @@ class AIService:
         response = await self._require_client().chat.completions.create(
             model="gpt-4o-mini",
             messages=[
-                {"role": "system", "content": "You are a professional English education content creator. Create easy-to-read lessons for intermediate learners (B1-B2 level). Use simple vocabulary and clear sentences. Output valid JSON with 'lessons' key containing a single lesson."},
+                {"role": "system", "content": f"You are a professional English education content creator. Create one lesson strictly for learner level {level} (CEFR {c['cefr']}). Follow constraints exactly. Output valid JSON with 'lessons' key containing a single lesson. The lesson.level MUST be '{level}'."},
                 {"role": "user", "content": prompt}
             ],
             temperature=0.7,
-            max_tokens=3000,
+            max_tokens=2500,
             response_format={ "type": "json_object" }
         )
         
@@ -259,6 +304,8 @@ class AIService:
             final_lessons = []
             for lesson in lessons:
                 lesson["japanese_title"] = japanese_title
+                # UI/Notion用: levelは必ず 1/2/3 の文字列に正規化
+                lesson["level"] = str(level)
                 if "question" not in lesson and "discussion_a" in lesson and lesson["discussion_a"]:
                     lesson["question"] = lesson["discussion_a"][0]
                 final_lessons.append(lesson)
