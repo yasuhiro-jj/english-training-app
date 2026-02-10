@@ -452,22 +452,40 @@ function SessionPageInner() {
         if (!isPlaying || isPaused) return;
         try {
             const synth = getSpeechSynthesis();
-            if (synth && typeof synth.pause === 'function') synth.pause();
-            setIsPaused(true);
+            // pause/resumeは多くのブラウザで信頼性が低いため、停止して現在位置を保持
+            if (synth && typeof synth.pause === 'function') {
+                synth.pause();
+                setIsPaused(true);
+            } else {
+                // pauseが使えない場合は停止して現在位置から再開できるようにする
+                safeCancelSpeech();
+                setIsPaused(true);
+                setIsPlaying(false);
+            }
         } catch {
-            // 一部環境でpauseが未対応の場合は停止にフォールバック
-            stopReading();
+            // エラー時も現在位置を保持して停止
+            safeCancelSpeech();
+            setIsPaused(true);
+            setIsPlaying(false);
         }
     };
 
     const resumeReading = () => {
-        if (!isPlaying || !isPaused) return;
+        // 一時停止中の場合のみ再開
+        if (!isPaused) return;
         try {
             const synth = getSpeechSynthesis();
-            if (synth && typeof synth.resume === 'function') synth.resume();
-            setIsPaused(false);
+            // resumeを試すが、失敗した場合は現在位置から再開
+            if (synth && typeof synth.resume === 'function') {
+                synth.resume();
+                setIsPaused(false);
+                setIsPlaying(true);
+            } else {
+                // resumeが使えない場合は現在位置から再開
+                playFromSentence(currentSentenceIndex);
+            }
         } catch {
-            // うまくresumeできない場合は現在位置から再開
+            // エラー時は現在位置から再開
             playFromSentence(currentSentenceIndex);
         }
     };
@@ -484,14 +502,32 @@ function SessionPageInner() {
     };
 
     const rewindSentence = () => {
-        if (currentSentenceIndex > 0) {
-            playFromSentence(Math.max(0, currentSentenceIndex - 1));
+        // 再生中または一時停止中でも巻き戻し可能にする
+        if (sentences.length === 0) return;
+        const targetIndex = Math.max(0, currentSentenceIndex - 1);
+        if (targetIndex !== currentSentenceIndex) {
+            // 再生中なら停止してから巻き戻し
+            if (isPlaying || isPaused) {
+                safeCancelSpeech();
+                setIsPlaying(false);
+                setIsPaused(false);
+            }
+            playFromSentence(targetIndex);
         }
     };
 
     const forwardSentence = () => {
-        if (currentSentenceIndex < sentences.length - 1) {
-            playFromSentence(currentSentenceIndex + 1);
+        // 再生中または一時停止中でも早送り可能にする
+        if (sentences.length === 0) return;
+        const targetIndex = Math.min(sentences.length - 1, currentSentenceIndex + 1);
+        if (targetIndex !== currentSentenceIndex && targetIndex < sentences.length) {
+            // 再生中なら停止してから早送り
+            if (isPlaying || isPaused) {
+                safeCancelSpeech();
+                setIsPlaying(false);
+                setIsPaused(false);
+            }
+            playFromSentence(targetIndex);
         }
     };
 
@@ -830,7 +866,7 @@ function SessionPageInner() {
                                         {/* 巻き戻しボタン */}
                                         <button
                                             onClick={rewindSentence}
-                                            disabled={isStarting || (!isPlaying && currentSentenceIndex === 0)}
+                                            disabled={isStarting || sentences.length === 0 || currentSentenceIndex === 0}
                                             className="flex items-center justify-center w-10 h-10 text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 rounded-full text-sm font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed"
                                             title="巻き戻し"
                                         >
@@ -906,7 +942,7 @@ function SessionPageInner() {
                                         {/* 早送りボタン */}
                                         <button
                                             onClick={forwardSentence}
-                                            disabled={isStarting || (!isPlaying && currentSentenceIndex >= sentences.length - 1)}
+                                            disabled={isStarting || sentences.length === 0 || currentSentenceIndex >= sentences.length - 1}
                                             className="flex items-center justify-center w-10 h-10 text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 rounded-full text-sm font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed"
                                             title="早送り"
                                         >
