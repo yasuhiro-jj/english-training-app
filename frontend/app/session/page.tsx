@@ -97,6 +97,7 @@ function SessionPageInner() {
     const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
     const playbackIdRef = useRef(0);
     const stopRequestedRef = useRef(false);
+    const pauseRequestedRef = useRef(false);
     const sentencesRef = useRef<string[]>([]);
     const voicesCacheRef = useRef<SpeechSynthesisVoice[] | null>(null);
     const speakWatchdogRef = useRef<number | null>(null);
@@ -298,6 +299,7 @@ function SessionPageInner() {
         // 直前の再生を無効化（onendの連鎖を止める）
         playbackIdRef.current += 1;
         stopRequestedRef.current = false;
+        pauseRequestedRef.current = false;
 
         clearSpeakWatchdog();
         safeCancelSpeech();
@@ -311,6 +313,7 @@ function SessionPageInner() {
 
         const speakSentence = (i: number) => {
             if (stopRequestedRef.current) return;
+            if (pauseRequestedRef.current) return;
             if (playbackId !== playbackIdRef.current) return;
 
             const list = sentencesRef.current;
@@ -374,6 +377,19 @@ function SessionPageInner() {
             };
 
             utterance.onerror = (e) => {
+                // 一時停止によるcancel()でエラーが発生することがあるため、一時停止中はエラーを無視
+                if (pauseRequestedRef.current) {
+                    console.log('[Session] Ignoring error during pause');
+                    return;
+                }
+                // stopRequestedがtrueの場合は、ユーザーが停止を要求したためエラーを無視
+                if (stopRequestedRef.current) {
+                    return;
+                }
+                // playbackIdが一致しない場合は、新しい再生が開始されているためエラーを無視
+                if (playbackId !== playbackIdRef.current) {
+                    return;
+                }
                 console.error('[Session] Speech synthesis error:', e);
                 clearSpeakWatchdog();
                 setIsStarting(false);
@@ -430,6 +446,8 @@ function SessionPageInner() {
             speakWatchdogRef.current = window.setTimeout(() => {
                 if (stopRequestedRef.current) return;
                 if (playbackId !== playbackIdRef.current) return;
+                // 一時停止中はエラーを表示しない
+                if (pauseRequestedRef.current) return;
                 try {
                     if (!synth.speaking && !synth.pending) {
                         setIsStarting(false);
@@ -452,46 +470,37 @@ function SessionPageInner() {
         if (!isPlaying || isPaused) return;
         try {
             const synth = getSpeechSynthesis();
-            // pause/resumeは多くのブラウザで信頼性が低いため、停止して現在位置を保持
-            if (synth && typeof synth.pause === 'function') {
-                synth.pause();
-                setIsPaused(true);
-            } else {
-                // pauseが使えない場合は停止して現在位置から再開できるようにする
-                safeCancelSpeech();
-                setIsPaused(true);
-                setIsPlaying(false);
-            }
-        } catch {
-            // エラー時も現在位置を保持して停止
+            // pause/resumeは多くのブラウザで信頼性が低いため、cancelして現在位置を保持する方法に変更
+            // これにより、再開時に確実に現在位置から再開できる
+            pauseRequestedRef.current = true;
             safeCancelSpeech();
             setIsPaused(true);
             setIsPlaying(false);
+            // utteranceRefをクリアして、次回の再生時に新しいutteranceを作成できるようにする
+            utteranceRef.current = null;
+        } catch {
+            // エラー時も現在位置を保持して停止
+            pauseRequestedRef.current = true;
+            safeCancelSpeech();
+            setIsPaused(true);
+            setIsPlaying(false);
+            utteranceRef.current = null;
         }
     };
 
     const resumeReading = () => {
         // 一時停止中の場合のみ再開
         if (!isPaused) return;
-        try {
-            const synth = getSpeechSynthesis();
-            // resumeを試すが、失敗した場合は現在位置から再開
-            if (synth && typeof synth.resume === 'function') {
-                synth.resume();
-                setIsPaused(false);
-                setIsPlaying(true);
-            } else {
-                // resumeが使えない場合は現在位置から再開
-                playFromSentence(currentSentenceIndex);
-            }
-        } catch {
-            // エラー時は現在位置から再開
-            playFromSentence(currentSentenceIndex);
-        }
+        // 現在位置から確実に再開する
+        // pause/resumeの代わりに、現在位置からplayFromSentenceを呼び出す
+        pauseRequestedRef.current = false;
+        setIsPaused(false);
+        playFromSentence(currentSentenceIndex);
     };
 
     const stopReading = () => {
         stopRequestedRef.current = true;
+        pauseRequestedRef.current = false;
         playbackIdRef.current += 1;
         clearSpeakWatchdog();
         safeCancelSpeech();
