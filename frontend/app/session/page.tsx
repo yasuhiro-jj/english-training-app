@@ -92,6 +92,7 @@ function SessionPageInner() {
     const [isPaused, setIsPaused] = useState(false);
     const [currentSentenceIndex, setCurrentSentenceIndex] = useState(0);
     const [sentences, setSentences] = useState<string[]>([]);
+    const [readAloudError, setReadAloudError] = useState('');
     const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
     const playbackIdRef = useRef(0);
     const stopRequestedRef = useRef(false);
@@ -253,9 +254,11 @@ function SessionPageInner() {
         const synth = (typeof window !== 'undefined' ? (window as any).speechSynthesis : null);
         if (!synth || typeof synth.speak !== 'function') {
             console.warn('[Session] speechSynthesis is not available');
-            setError('このブラウザでは音声読み上げ（Read Aloud）が利用できません。');
+            setReadAloudError('このブラウザでは音声読み上げ（Read Aloud）が利用できません。Safari/Chromeでお試しください。');
             return;
         }
+
+        setReadAloudError('');
 
         // Kick off voice loading (do not await; keep user-gesture sync)
         if (!voicesCacheRef.current) {
@@ -350,6 +353,12 @@ function SessionPageInner() {
                 clearSpeakWatchdog();
                 setIsPlaying(false);
                 setIsPaused(false);
+                setReadAloudError('音読中にエラーが発生しました。別ブラウザ（Safari/Chrome）でお試しください。');
+            };
+
+            utterance.onstart = () => {
+                // iOS などで start が発火しないケースの検知にも使う
+                clearSpeakWatchdog();
             };
 
             utteranceRef.current = utterance;
@@ -357,19 +366,32 @@ function SessionPageInner() {
             // IMPORTANT (mobile): speechSynthesis.speak MUST be called synchronously
             // from the user gesture chain. Do NOT await before calling speak().
             try {
-                const voices = voicesCacheRef.current || (synth.getVoices?.() || []);
-                const v = pickEnglishVoice(voices);
-                if (v) utterance.voice = v;
+                const ua = (typeof navigator !== 'undefined' ? navigator.userAgent : '');
+                const isIOS = /iPad|iPhone|iPod/i.test(ua);
+                // iOS Safari is prone to silent failures when explicitly setting utterance.voice.
+                // Prefer letting it choose the default voice on iOS.
+                if (!isIOS) {
+                    const voices = voicesCacheRef.current || (synth.getVoices?.() || []);
+                    const v = pickEnglishVoice(voices);
+                    if (v) utterance.voice = v;
+                }
             } catch {
                 // ignore
             }
 
             try {
+                // Some mobile browsers get "stuck paused" and require resume()
+                try {
+                    if (typeof synth.resume === 'function') synth.resume();
+                } catch {
+                    // ignore
+                }
                 synth.speak(utterance);
             } catch (e) {
                 console.warn('[Session] speechSynthesis.speak failed:', e);
                 setIsPlaying(false);
                 setIsPaused(false);
+                setReadAloudError('音読を開始できませんでした。スマホの場合は「消音解除」や音量、または別ブラウザ（Safari/Chrome）をお試しください。');
                 return;
             }
 
@@ -382,7 +404,7 @@ function SessionPageInner() {
                     if (!synth.speaking && !synth.pending) {
                         setIsPlaying(false);
                         setIsPaused(false);
-                        setError('音読を開始できませんでした。スマホの場合は「消音解除」や「音量」、または別ブラウザ（Chrome/Safari）をお試しください。');
+                        setReadAloudError('音読が開始できませんでした。スマホの場合は「消音解除」や音量、または別ブラウザ（Safari/Chrome）をお試しください。');
                     }
                 } catch {
                     // ignore
@@ -848,6 +870,11 @@ function SessionPageInner() {
                                         </button>
                                     </div>
                                 </div>
+                                {readAloudError && (
+                                    <div className="mb-4 text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-4 py-2">
+                                        {readAloudError}
+                                    </div>
+                                )}
                                 <div className="prose max-w-none text-gray-800 leading-relaxed whitespace-pre-wrap font-serif text-lg">
                                     {currentLesson.content}
                                 </div>
