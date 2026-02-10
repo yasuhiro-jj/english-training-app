@@ -96,6 +96,8 @@ function SessionPageInner() {
     const playbackIdRef = useRef(0);
     const stopRequestedRef = useRef(false);
     const sentencesRef = useRef<string[]>([]);
+    const voicesCacheRef = useRef<SpeechSynthesisVoice[] | null>(null);
+    const speakWatchdogRef = useRef<number | null>(null);
 
     useEffect(() => {
         sentencesRef.current = sentences;
@@ -110,6 +112,13 @@ function SessionPageInner() {
             }
         } catch (e) {
             console.warn('[Session] speechSynthesis.cancel failed:', e);
+        }
+    };
+
+    const clearSpeakWatchdog = () => {
+        if (speakWatchdogRef.current) {
+            window.clearTimeout(speakWatchdogRef.current);
+            speakWatchdogRef.current = null;
         }
     };
 
@@ -197,7 +206,8 @@ function SessionPageInner() {
             };
 
             // Increase timeout for mobile browsers which may take longer to load voices
-            const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+            const ua = (typeof navigator !== 'undefined' ? navigator.userAgent : '');
+            const isMobile = /iPhone|iPad|iPod|Android/i.test(ua);
             const timeout = isMobile ? 2000 : 1200;
             const timer = setTimeout(() => {
                 synth.onvoiceschanged = null;
@@ -243,14 +253,30 @@ function SessionPageInner() {
         const synth = (typeof window !== 'undefined' ? (window as any).speechSynthesis : null);
         if (!synth || typeof synth.speak !== 'function') {
             console.warn('[Session] speechSynthesis is not available');
-            alert('このブラウザでは音声読み上げ機能が利用できません。');
+            setError('このブラウザでは音声読み上げ（Read Aloud）が利用できません。');
             return;
+        }
+
+        // Kick off voice loading (do not await; keep user-gesture sync)
+        if (!voicesCacheRef.current) {
+            try {
+                const v = synth.getVoices?.() || [];
+                if (v.length > 0) voicesCacheRef.current = v;
+                else {
+                    void getVoicesWithWait(synth).then((vv) => {
+                        if (vv && vv.length > 0) voicesCacheRef.current = vv;
+                    });
+                }
+            } catch {
+                // ignore
+            }
         }
 
         // 直前の再生を無効化（onendの連鎖を止める）
         playbackIdRef.current += 1;
         stopRequestedRef.current = false;
 
+        clearSpeakWatchdog();
         safeCancelSpeech();
         setIsPlaying(true);
         setIsPaused(false);
@@ -305,6 +331,7 @@ function SessionPageInner() {
             utterance.onend = () => {
                 if (stopRequestedRef.current) return;
                 if (playbackId !== playbackIdRef.current) return;
+                clearSpeakWatchdog();
 
                 setCurrentSentenceIndex(nextIndex);
 
@@ -320,45 +347,47 @@ function SessionPageInner() {
 
             utterance.onerror = (e) => {
                 console.error('[Session] Speech synthesis error:', e);
+                clearSpeakWatchdog();
                 setIsPlaying(false);
                 setIsPaused(false);
             };
 
             utteranceRef.current = utterance;
 
-            // Ensure we have English voices BEFORE speaking; otherwise it often defaults to a JP voice.
-            // For mobile browsers, we need to wait for voices to be loaded before speaking.
-            (async () => {
+            // IMPORTANT (mobile): speechSynthesis.speak MUST be called synchronously
+            // from the user gesture chain. Do NOT await before calling speak().
+            try {
+                const voices = voicesCacheRef.current || (synth.getVoices?.() || []);
+                const v = pickEnglishVoice(voices);
+                if (v) utterance.voice = v;
+            } catch {
+                // ignore
+            }
+
+            try {
+                synth.speak(utterance);
+            } catch (e) {
+                console.warn('[Session] speechSynthesis.speak failed:', e);
+                setIsPlaying(false);
+                setIsPaused(false);
+                return;
+            }
+
+            // Watchdog: if speaking never starts, unblock UI and show message.
+            clearSpeakWatchdog();
+            speakWatchdogRef.current = window.setTimeout(() => {
+                if (stopRequestedRef.current) return;
+                if (playbackId !== playbackIdRef.current) return;
                 try {
-                    const voices = await getVoicesWithWait(synth);
-                    const v = pickEnglishVoice(voices);
-                    if (v) utterance.voice = v;
-                    
-                    // Wait a bit more for mobile browsers to ensure voice is set
-                    await new Promise(resolve => setTimeout(resolve, 100));
-                    
-                    if (stopRequestedRef.current) return;
-                    if (playbackId !== playbackIdRef.current) return;
-                    
-                    try {
-                        synth.speak(utterance);
-                    } catch (e) {
-                        console.warn('[Session] speechSynthesis.speak failed:', e);
+                    if (!synth.speaking && !synth.pending) {
                         setIsPlaying(false);
                         setIsPaused(false);
+                        setError('音読を開始できませんでした。スマホの場合は「消音解除」や「音量」、または別ブラウザ（Chrome/Safari）をお試しください。');
                     }
-                } catch (e) {
-                    console.warn('[Session] Failed to get voices or speak:', e);
-                    // Fallback: try to speak without waiting for voices
-                    try {
-                        synth.speak(utterance);
-                    } catch (speakError) {
-                        console.warn('[Session] speechSynthesis.speak failed (fallback):', speakError);
-                        setIsPlaying(false);
-                        setIsPaused(false);
-                    }
+                } catch {
+                    // ignore
                 }
-            })();
+            }, 900);
         };
 
         speakSentence(Math.max(0, Math.min(index, sentences.length - 1)));
@@ -392,6 +421,7 @@ function SessionPageInner() {
     const stopReading = () => {
         stopRequestedRef.current = true;
         playbackIdRef.current += 1;
+        clearSpeakWatchdog();
         safeCancelSpeech();
         setIsPlaying(false);
         setIsPaused(false);
