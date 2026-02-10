@@ -655,8 +655,8 @@ function SessionPageInner() {
                             <div className="grid md:grid-cols-2 gap-6">
                                 {lessons.map((lesson, index) => (
                                     <div key={index} className="border-2 border-gray-100 hover:border-indigo-500 rounded-xl p-6 transition-all hover:shadow-md cursor-pointer group" onClick={() => handleSelectLesson(lesson)}>
-                                        <div className="flex justify-between items-start mb-4">
-                                            <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+                                        <div className="flex justify-between items-start mb-4 gap-2">
+                                            <span className={`px-3 py-1.5 sm:py-1 rounded-full text-sm sm:text-xs font-bold whitespace-nowrap ${
                                                 lesson.level === '1' ? 'bg-green-100 text-green-800' :
                                                 lesson.level === '2' ? 'bg-orange-100 text-orange-800' :
                                                 'bg-red-100 text-red-800'
@@ -665,7 +665,7 @@ function SessionPageInner() {
                                                 lesson.level === '2' ? '中級者' :
                                                 '上級者'}
                                             </span>
-                                            <span className="text-xs text-gray-500">{lesson.category}</span>
+                                            <span className="text-xs sm:text-xs text-gray-500 truncate">{lesson.category}</span>
                                         </div>
                                         <h3 className="text-xl font-bold text-gray-900 mb-3 group-hover:text-indigo-600">{lesson.title}</h3>
                                         <p className="text-gray-600 text-sm line-clamp-4 mb-4">{lesson.content}</p>
