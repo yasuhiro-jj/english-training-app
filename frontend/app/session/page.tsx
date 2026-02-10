@@ -104,10 +104,19 @@ function SessionPageInner() {
         sentencesRef.current = sentences;
     }, [sentences]);
 
+    const getUA = () => (typeof navigator !== 'undefined' ? navigator.userAgent || '' : '');
+
+    const getSpeechSynthesis = (): SpeechSynthesis | null => {
+        if (typeof window === 'undefined') return null;
+        const w: any = window as any;
+        // Some environments expose it on globalThis but not window (or vice versa).
+        return (w.speechSynthesis || (globalThis as any).speechSynthesis || null) as SpeechSynthesis | null;
+    };
+
     const safeCancelSpeech = () => {
         try {
             // 一部モバイル/ブラウザでspeechSynthesisが未実装 or 例外になることがある
-            const synth = (typeof window !== 'undefined' ? (window as any).speechSynthesis : null);
+            const synth = getSpeechSynthesis();
             if (synth && typeof synth.cancel === 'function') {
                 synth.cancel();
             }
@@ -251,10 +260,20 @@ function SessionPageInner() {
         if (!currentLesson || sentences.length === 0) return;
 
         // Check if speech synthesis is available
-        const synth = (typeof window !== 'undefined' ? (window as any).speechSynthesis : null);
+        const synth = getSpeechSynthesis();
         if (!synth || typeof synth.speak !== 'function') {
             console.warn('[Session] speechSynthesis is not available');
-            setReadAloudError('このブラウザでは音声読み上げ（Read Aloud）が利用できません。Safari/Chromeでお試しください。');
+            const ua = getUA();
+            const isInApp =
+                /Line\//i.test(ua) ||
+                /FBAN|FBAV/i.test(ua) ||
+                /Instagram/i.test(ua) ||
+                /Twitter/i.test(ua);
+            setReadAloudError(
+                isInApp
+                    ? 'アプリ内ブラウザでは音声読み上げが使えないことがあります。右上メニューから「Safariで開く / Chromeで開く」をお試しください。'
+                    : 'このブラウザでは音声読み上げ（Read Aloud）が利用できません。Safari/Chromeでお試しください。'
+            );
             return;
         }
 
@@ -316,11 +335,12 @@ function SessionPageInner() {
                 return;
             }
 
-            const synth = (typeof window !== 'undefined' ? (window as any).speechSynthesis : null);
+            const synth = getSpeechSynthesis();
             if (!synth || typeof synth.speak !== 'function') {
                 console.warn('[Session] speechSynthesis.speak is not available in this browser');
                 setIsPlaying(false);
                 setIsPaused(false);
+                setReadAloudError('音声読み上げ（Read Aloud）が利用できません。Safari/Chromeでお試しください。');
                 return;
             }
 
@@ -366,7 +386,7 @@ function SessionPageInner() {
             // IMPORTANT (mobile): speechSynthesis.speak MUST be called synchronously
             // from the user gesture chain. Do NOT await before calling speak().
             try {
-                const ua = (typeof navigator !== 'undefined' ? navigator.userAgent : '');
+                const ua = getUA();
                 const isIOS = /iPad|iPhone|iPod/i.test(ua);
                 // iOS Safari is prone to silent failures when explicitly setting utterance.voice.
                 // Prefer letting it choose the default voice on iOS.
@@ -419,7 +439,7 @@ function SessionPageInner() {
         // speaking中のみpause（paused中はresumeへ）
         if (!isPlaying || isPaused) return;
         try {
-            const synth = (typeof window !== 'undefined' ? (window as any).speechSynthesis : null);
+            const synth = getSpeechSynthesis();
             if (synth && typeof synth.pause === 'function') synth.pause();
             setIsPaused(true);
         } catch {
@@ -431,7 +451,7 @@ function SessionPageInner() {
     const resumeReading = () => {
         if (!isPlaying || !isPaused) return;
         try {
-            const synth = (typeof window !== 'undefined' ? (window as any).speechSynthesis : null);
+            const synth = getSpeechSynthesis();
             if (synth && typeof synth.resume === 'function') synth.resume();
             setIsPaused(false);
         } catch {
