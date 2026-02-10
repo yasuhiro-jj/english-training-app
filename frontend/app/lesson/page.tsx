@@ -1,9 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { api, LessonOption } from '@/lib/api';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useRequireAuth } from '../lib/hooks/useRequireAuth';
 
 function normalizeString(value: unknown): string {
@@ -44,13 +44,24 @@ function normalizeLesson(raw: unknown): LessonOption {
   };
 }
 
-export default function LessonPage() {
+function LessonPageContent() {
   const { user, loading: authLoading } = useRequireAuth();
   const router = useRouter();
   const [newsUrl, setNewsUrl] = useState('');
   const [lesson, setLesson] = useState<LessonOption | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    if (user && !lesson && !loading) {
+      const levelParam = searchParams.get('level');
+      const initialLevel = levelParam ? parseInt(levelParam, 10) : 2; // デフォルトは2
+      if (!isNaN(initialLevel)) {
+        generateLessonAuto(initialLevel);
+      }
+    }
+  }, [user, lesson, loading, searchParams]);
 
   const generateLessonFromUrl = async () => {
     if (!newsUrl.trim()) {
@@ -77,14 +88,14 @@ export default function LessonPage() {
     }
   };
 
-  const generateLessonAuto = async () => {
+  const generateLessonAuto = async (level: number = 2) => {
     setLoading(true);
     setError('');
     setLesson(null);
     setNewsUrl(''); // URLをクリア
 
     try {
-      const response = await api.generateLessonAuto();
+      const response = await api.generateLessonAuto(level);
       
       if (response.lessons && response.lessons.length > 0) {
         setLesson(normalizeLesson(response.lessons[0]));
@@ -140,7 +151,11 @@ export default function LessonPage() {
             複数のニュースソースから自動で記事を選び、英語レッスンを生成します
           </p>
           <button
-            onClick={generateLessonAuto}
+            onClick={() => {
+              const levelParam = searchParams.get('level');
+              const level = levelParam ? parseInt(levelParam, 10) : 2;
+              generateLessonAuto(isNaN(level) ? 2 : level);
+            }}
             disabled={loading}
             className="w-full px-6 py-4 bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-[0_0_20px_rgba(79,70,229,0.4)] hover:shadow-[0_0_35px_rgba(79,70,229,0.6)] active:scale-95 flex items-center justify-center"
           >
@@ -352,5 +367,17 @@ export default function LessonPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function LessonPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-[#0a0c10] flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
+      </div>
+    }>
+      <LessonPageContent />
+    </Suspense>
   );
 }

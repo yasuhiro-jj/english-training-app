@@ -75,7 +75,7 @@ function SessionPageInner() {
     const { user, loading: authLoading } = useRequireAuth();
     const searchParams = useSearchParams();
     // added 'learning' step for reading the article before recording
-    const [step, setStep] = useState<'input' | 'selection' | 'learning' | 'recording' | 'analyzing' | 'complete'>('input');
+    const [step, setStep] = useState<'input' | 'selection' | 'learning' | 'recording' | 'analyzing' | 'complete' | 'preparing'>('input');
     const [articleUrl, setArticleUrl] = useState('');
     const [sessionId, setSessionId] = useState('');
     const [currentLesson, setCurrentLesson] = useState<LessonOption | null>(null);
@@ -511,7 +511,11 @@ function SessionPageInner() {
         setIsGenerating(true);
         setError('');
         try {
-            const response = await api.generateLessons();
+            // URLパラメータから難易度を取得（デフォルトは2=中級）
+            const levelParam = searchParams.get('level');
+            const level = levelParam ? parseInt(levelParam, 10) : 2;
+            console.log('[Session] Generating lessons with level:', level);
+            const response = await api.generateLessons(level);
             console.log('[Session] handleGenerate success:', response);
             setLessons((response.lessons || []).map((l) => normalizeLesson(l)));
             setStep('selection');
@@ -527,8 +531,8 @@ function SessionPageInner() {
     const handleSelectLesson = async (lesson: LessonOption) => {
         try {
             setError('');
-            // セッション開始中の状態が分かるように一時的に analyzing を使う
-            setStep('analyzing');
+            // セッション開始中の状態が分かるように一時的に preparing を使う
+            setStep('preparing');
             const normalizedLesson = normalizeLesson(lesson);
             // LessonOptionをapi.startSessionが期待する形式に変換
             const customContent = {
@@ -591,11 +595,11 @@ function SessionPageInner() {
         <div className="min-h-screen bg-gray-50 pt-32 pb-12 font-sans">
             <div className="container mx-auto px-4 max-w-4xl">
                 <div className="mb-6">
-                    <a href="/" className="text-indigo-600 hover:text-indigo-800 flex items-center space-x-2">
+                    <a href="/dashboard" className="text-indigo-600 hover:text-indigo-800 flex items-center space-x-2">
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
                         </svg>
-                        <span>ホームに戻る</span>
+                        <span>ダッシュボードに戻る</span>
                     </a>
                 </div>
 
@@ -610,7 +614,7 @@ function SessionPageInner() {
                         <div className="space-y-8 text-center py-10">
                             <h1 className="text-2xl sm:text-4xl font-bold text-gray-900 mb-4">今日のレッスンを作成</h1>
                             <p className="text-gray-600 mb-8">
-                                毎日新聞のトップニュースから、あなただけの英会話レッスンを生成します。
+                                新聞のトップニュースから、あなただけの英会話レッスンを生成します。
                             </p>
 
                             <button
@@ -652,8 +656,14 @@ function SessionPageInner() {
                                 {lessons.map((lesson, index) => (
                                     <div key={index} className="border-2 border-gray-100 hover:border-indigo-500 rounded-xl p-6 transition-all hover:shadow-md cursor-pointer group" onClick={() => handleSelectLesson(lesson)}>
                                         <div className="flex justify-between items-start mb-4">
-                                            <span className={`px-3 py-1 rounded-full text-xs font-bold ${lesson.level === 'B1' ? 'bg-green-100 text-green-800' : 'bg-orange-100 text-orange-800'}`}>
-                                                {lesson.level === 'B1' ? '初中級 (B1)' : '中上級 (B2)'}
+                                            <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+                                                lesson.level === '1' ? 'bg-green-100 text-green-800' :
+                                                lesson.level === '2' ? 'bg-orange-100 text-orange-800' :
+                                                'bg-red-100 text-red-800'
+                                            }`}>
+                                                {lesson.level === '1' ? '初心者' :
+                                                lesson.level === '2' ? '中級者' :
+                                                '上級者'}
                                             </span>
                                             <span className="text-xs text-gray-500">{lesson.category}</span>
                                         </div>
@@ -669,6 +679,14 @@ function SessionPageInner() {
                             <button onClick={handleReset} className="w-full text-gray-500 hover:text-gray-700 mt-4">
                                 キャンセルして戻る
                             </button>
+                        </div>
+                    )}
+
+                    {step === 'preparing' && ( // 新しいpreparingステップのUI
+                        <div className="text-center py-12">
+                            <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-indigo-600 mx-auto mb-4"></div>
+                            <p className="text-xl text-gray-700">レッスンを準備中...</p>
+                            <p className="text-sm text-gray-500 mt-2">これには数秒かかる場合があります。</p>
                         </div>
                     )}
 
@@ -719,7 +737,7 @@ function SessionPageInner() {
                                         >
                                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12.066 11.2a1 1 0 000 1.6l5.334 4A1 1 0 0019 16V8a1 1 0 00-1.6-.8l-5.334 4zM4.066 11.2a1 1 0 000 1.6l5.334 4A1 1 0 0011 16V8a1 1 0 00-1.6-.8l-5.334 4z" />
-                                            </svg>
+                                        </svg>
                                         </button>
                                         
                                         {/* 再生/停止ボタン */}
