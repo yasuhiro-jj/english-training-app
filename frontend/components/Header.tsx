@@ -28,12 +28,6 @@ export default function Header() {
                     {user && (
                         <nav className="hidden md:flex items-center space-x-4 lg:space-x-6">
                             <Link
-                                href="/lesson"
-                                className={`text-xs lg:text-sm font-bold transition-colors ${pathname === '/lesson' ? 'text-indigo-400' : 'text-slate-400 hover:text-white'}`}
-                            >
-                                Daily News (Lesson)
-                            </Link>
-                            <Link
                                 href="/lessons"
                                 className={`text-xs lg:text-sm font-bold transition-colors ${pathname === '/lessons' ? 'text-indigo-400' : 'text-slate-400 hover:text-white'}`}
                             >
