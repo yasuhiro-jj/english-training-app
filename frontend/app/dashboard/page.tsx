@@ -5,6 +5,7 @@ import { api } from '@/lib/api';
 import { useRequireAuth } from '../lib/hooks/useRequireAuth';
 import { useRouter } from 'next/navigation';
 import AIChat from '../../components/AIChat';
+import { PlanCards } from '../../components/PlanCards';
 
 export default function DashboardPage() {
     const { user, loading: authLoading } = useRequireAuth();
@@ -185,35 +186,59 @@ export default function DashboardPage() {
                     </div>
                 )}
 
+                {/* プラン導線（無料/体験中のユーザー向けに常時表示） */}
+                {(stats?.subscription?.plan === 'free' || stats?.subscription?.is_trial) && !showTrialExpiredNotification && (
+                    <div className="mb-8 p-8 bg-white/80 backdrop-blur-xl border border-gray-200 rounded-2xl shadow-lg">
+                        <div className="flex items-start justify-between gap-4 mb-6">
+                            <div>
+                                <h3 className="text-xl font-bold text-gray-900 mb-2">プランを確認する</h3>
+                                <p className="text-gray-700">
+                                    必要になったタイミングで、Basic / Premium（月額・年間）から選べます。
+                                </p>
+                                <p className="text-sm text-indigo-700 font-semibold mt-2">
+                                    ⚠️ 自動課金は一切発生しません。
+                                </p>
+                            </div>
+                            <button
+                                onClick={() => router.push('/plans')}
+                                className="shrink-0 px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg transition-colors"
+                            >
+                                プランページへ
+                            </button>
+                        </div>
+                        <PlanCards />
+                    </div>
+                )}
+
                 {/* 体験期間終了通知 */}
                 {showTrialExpiredNotification && (
-                    <div className="mb-8 p-6 bg-gradient-to-r from-indigo-50 to-purple-50 border-2 border-indigo-300 rounded-2xl shadow-lg">
-                        <div className="flex items-start space-x-4">
+                    <div className="mb-8 p-8 bg-gradient-to-r from-indigo-50 to-purple-50 border-2 border-indigo-300 rounded-2xl shadow-lg">
+                        <div className="flex items-start space-x-4 mb-6">
                             <div className="w-12 h-12 bg-indigo-600 rounded-xl flex items-center justify-center flex-shrink-0">
                                 <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                                 </svg>
                             </div>
                             <div className="flex-1">
-                                <h3 className="text-lg font-bold text-gray-900 mb-2">体験期間が終了しました</h3>
-                                <p className="text-gray-700 mb-4">
-                                    7日間の無料体験期間が終了しました。引き続きご利用いただく場合は、有料プランへのご登録をお願いいたします。
+                                <h3 className="text-xl font-bold text-gray-900 mb-2">体験期間が終了しました</h3>
+                                <p className="text-gray-700 mb-2">
+                                    7日間の無料体験期間が終了しました。引き続きご利用いただく場合は、以下のプランからお選びください。
                                 </p>
-                                <div className="flex flex-col sm:flex-row gap-3">
-                                    <button
-                                        onClick={() => router.push('/')}
-                                        className="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg transition-colors"
-                                    >
-                                        プランを確認する
-                                    </button>
-                                    <button
-                                        onClick={() => setShowTrialExpiredNotification(false)}
-                                        className="px-6 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold rounded-lg transition-colors"
-                                    >
-                                        閉じる
-                                    </button>
-                                </div>
+                                <p className="text-sm text-indigo-600 font-semibold mb-4">
+                                    ⚠️ 自動課金は一切発生しません。ご希望のプランを選択してから決済を行ってください。
+                                </p>
                             </div>
+                        </div>
+                        
+                        <PlanCards />
+                        
+                        <div className="flex justify-center">
+                            <button
+                                onClick={() => setShowTrialExpiredNotification(false)}
+                                className="px-6 py-2 text-gray-600 hover:text-gray-900 font-semibold transition-colors text-sm"
+                            >
+                                後で決める
+                            </button>
                         </div>
                     </div>
                 )}

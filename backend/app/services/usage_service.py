@@ -18,6 +18,10 @@ class UsageService:
         """
         ユーザーのサブスクリプション状態を取得
         
+        重要: 自動課金は一切発生しません。
+        体験期間終了後は、ユーザーが明示的にプランを選択するまで
+        statusが"expired"として扱われ、サービスが制限されます。
+        
         Returns:
             {
                 "plan": "free" | "basic" | "premium",
@@ -165,6 +169,9 @@ class UsageService:
         """
         Whisper使用可能かチェック
         
+        重要: 自動課金は一切発生しません。
+        体験期間終了後は、ユーザーが明示的にプランを選択するまでサービスを制限します。
+        
         Returns:
             {
                 "allowed": bool,
@@ -174,6 +181,17 @@ class UsageService:
             }
         """
         subscription = await self.get_user_subscription_status(email)
+        status = subscription.get("status", "trial")
+        plan = subscription.get("plan", "free")
+        
+        # 体験期間終了後、まだ有料プランに登録していない場合
+        if status == "expired" and plan == "free":
+            return {
+                "allowed": False,
+                "reason": "体験期間が終了しました。有料プランへのご登録をお願いいたします。自動課金は一切発生しません。",
+                "remaining_minutes": 0.0,
+                "should_fallback_to_stt": False
+            }
         
         if subscription["is_trial"]:
             # 無料体験: 20分制限
@@ -203,7 +221,8 @@ class UsageService:
                 "should_fallback_to_stt": False
             }
         else:
-            # 有料プラン: 無制限
+            # 有料プラン（basic/premium）: 無制限
+            # 注意: 有料プランはユーザーが明示的に選択した場合のみ有効になります
             return {
                 "allowed": True,
                 "reason": "",

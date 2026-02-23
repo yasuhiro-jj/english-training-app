@@ -39,12 +39,18 @@ export default function Header() {
                             >
                                 過去の記事
                             </Link>
-                            <Link
-                                href="/dashboard"
-                                className={`text-xs lg:text-sm font-bold transition-colors ${pathname === '/dashboard' ? 'text-indigo-400' : 'text-slate-400 hover:text-white'}`}
-                            >
-                                Dashboard
-                            </Link>
+                                <Link
+                                    href="/dashboard"
+                                    className={`text-xs lg:text-sm font-bold transition-colors ${pathname === '/dashboard' ? 'text-indigo-400' : 'text-slate-400 hover:text-white'}`}
+                                >
+                                    Dashboard
+                                </Link>
+                                <Link
+                                href="/plans"
+                                className={`text-xs lg:text-sm font-bold transition-colors ${pathname === '/plans' ? 'text-indigo-400' : 'text-slate-400 hover:text-white'}`}
+                                >
+                                    プラン
+                                </Link>
                             <Link
                                 href="/chat"
                                 className={`flex items-center space-x-1 text-xs lg:text-sm font-bold transition-colors ${pathname === '/chat' ? 'text-emerald-400' : 'text-slate-400 hover:text-white'}`}
