@@ -186,30 +186,6 @@ export default function DashboardPage() {
                     </div>
                 )}
 
-                {/* プラン導線（無料/体験中のユーザー向けに常時表示） */}
-                {(stats?.subscription?.plan === 'free' || stats?.subscription?.is_trial) && !showTrialExpiredNotification && (
-                    <div className="mb-8 p-8 bg-white/80 backdrop-blur-xl border border-gray-200 rounded-2xl shadow-lg">
-                        <div className="flex items-start justify-between gap-4 mb-6">
-                            <div>
-                                <h3 className="text-xl font-bold text-gray-900 mb-2">プランを確認する</h3>
-                                <p className="text-gray-700">
-                                    必要になったタイミングで、Basic / Premium（月額・年間）から選べます。
-                                </p>
-                                <p className="text-sm text-indigo-700 font-semibold mt-2">
-                                    ⚠️ 自動課金は一切発生しません。
-                                </p>
-                            </div>
-                            <button
-                                onClick={() => router.push('/plans')}
-                                className="shrink-0 px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg transition-colors"
-                            >
-                                プランページへ
-                            </button>
-                        </div>
-                        <PlanCards />
-                    </div>
-                )}
-
                 {/* 体験期間終了通知 */}
                 {showTrialExpiredNotification && (
                     <div className="mb-8 p-8 bg-gradient-to-r from-indigo-50 to-purple-50 border-2 border-indigo-300 rounded-2xl shadow-lg">
@@ -343,6 +319,30 @@ export default function DashboardPage() {
                         Back to Home
                     </button>
                 </div>
+
+                {/* プラン導線（無料/体験中のユーザー向けに常時表示） - 一番下に配置 */}
+                {(stats?.subscription?.plan === 'free' || stats?.subscription?.is_trial) && !showTrialExpiredNotification && (
+                    <div className="mt-12 p-8 bg-white/80 backdrop-blur-xl border border-gray-200 rounded-2xl shadow-lg">
+                        <div className="flex items-start justify-between gap-4 mb-6">
+                            <div>
+                                <h3 className="text-xl font-bold text-gray-900 mb-2">プランを確認する</h3>
+                                <p className="text-gray-700">
+                                    必要になったタイミングで、Basic / Premium（月額・年間）から選べます。
+                                </p>
+                                <p className="text-sm text-indigo-700 font-semibold mt-2">
+                                    ⚠️ 自動課金は一切発生しません。
+                                </p>
+                            </div>
+                            <button
+                                onClick={() => router.push('/plans')}
+                                className="shrink-0 px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg transition-colors"
+                            >
+                                プランページへ
+                            </button>
+                        </div>
+                        <PlanCards />
+                    </div>
+                )}
             </div>
         </div>
     );

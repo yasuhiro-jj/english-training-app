@@ -559,7 +559,9 @@ export default function LandingPage() {
                     <span className="text-gray-600">/月</span>
                   </div>
                   <p className="text-sm text-gray-500 line-through mb-1">¥3,000</p>
-                  <p className="text-sm text-gray-600 mb-6">年額: ¥29,800（17%オフ）</p>
+                  <p className="text-sm text-gray-600 mb-6">
+                    年額: <a href="https://buy.stripe.com/5kQ5kD0ev8BX41pbgw5gc01" target="_blank" rel="noopener noreferrer" className="text-indigo-600 hover:text-indigo-700 font-semibold underline">¥29,800（17%オフ）</a>
+                  </p>
                 </div>
                 <ul className="space-y-4 mb-8">
                   <li className="flex items-start">
@@ -583,11 +585,24 @@ export default function LandingPage() {
                     <span className="text-gray-700">学習進捗の可視化</span>
                   </li>
                 </ul>
-                <Link href={user ? "/dashboard" : "/signup"}>
-                  <button className="w-full px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-full transition-colors">
-                    今すぐ始める
-                  </button>
-                </Link>
+                <div className="space-y-3">
+                  <a
+                    href="https://buy.stripe.com/28E3cvf9pcSd69x0BS5gc00"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block w-full px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-full transition-colors text-center"
+                  >
+                    月額プランを選択
+                  </a>
+                  <a
+                    href="https://buy.stripe.com/5kQ5kD0ev8BX41pbgw5gc01"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block w-full px-6 py-3 bg-white border-2 border-indigo-600 hover:bg-indigo-50 text-indigo-600 font-bold rounded-full transition-colors text-center"
+                  >
+                    年額プランを選択（17%オフ）
+                  </a>
+                </div>
               </div>
             </FadeInUp>
 
@@ -607,7 +622,9 @@ export default function LandingPage() {
                     <span className="text-gray-600">/月</span>
                   </div>
                   <p className="text-sm text-gray-500 line-through mb-1">¥5,000</p>
-                  <p className="text-sm text-gray-600 mb-6">年額: ¥49,800（17%オフ）</p>
+                  <p className="text-sm text-gray-600 mb-6">
+                    年額: <a href="https://buy.stripe.com/9B65kD1izg4p55t84k5gc03" target="_blank" rel="noopener noreferrer" className="text-purple-600 hover:text-purple-700 font-semibold underline">¥49,800（17%オフ）</a>
+                  </p>
                 </div>
                 <ul className="space-y-4 mb-8">
                   <li className="flex items-start">
@@ -638,11 +655,24 @@ export default function LandingPage() {
                     <span className="text-gray-700">発音分析（詳細版）</span>
                   </li>
                 </ul>
-                <Link href={user ? "/dashboard" : "/signup"}>
-                  <button className="w-full px-6 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold rounded-full transition-colors shadow-lg">
-                    今すぐ始める
-                  </button>
-                </Link>
+                <div className="space-y-3">
+                  <a
+                    href="https://buy.stripe.com/00w28rd1h9G1eG3bgw5gc02"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block w-full px-6 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold rounded-full transition-colors shadow-lg text-center"
+                  >
+                    月額プランを選択
+                  </a>
+                  <a
+                    href="https://buy.stripe.com/9B65kD1izg4p55t84k5gc03"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block w-full px-6 py-3 bg-white border-2 border-purple-600 hover:bg-purple-50 text-purple-600 font-bold rounded-full transition-colors text-center shadow-md"
+                  >
+                    年額プランを選択（17%オフ）
+                  </a>
+                </div>
               </div>
             </FadeInUp>
           </div>
