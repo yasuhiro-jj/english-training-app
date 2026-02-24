@@ -587,7 +587,7 @@ export default function LandingPage() {
                 </ul>
                 <div className="space-y-3">
                   <a
-                    href="https://buy.stripe.com/test_28E3cvf9pcSd69x0BS5gc00"
+                    href="https://buy.stripe.com/test_5kQ5kD0ev8BX41pbgw5gc01"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="block w-full px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-full transition-colors text-center"

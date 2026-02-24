@@ -18,7 +18,7 @@ const PLANS: PlanCard[] = [
     priceMain: '¥2,980',
     priceSub: '/月',
     description: '月額制のプランです。いつでもキャンセル可能です。',
-    href: 'https://buy.stripe.com/test_28E3cvf9pcSd69x0BS5gc00',
+    href: 'https://buy.stripe.com/test_5kQ5kD0ev8BX41pbgw5gc01',
     theme: 'indigo',
   },
   {
