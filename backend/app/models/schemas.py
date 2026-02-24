@@ -102,4 +102,5 @@ class TtsSpeakRequest(BaseModel):
     text: str
     voice: Optional[str] = None
     model: Optional[str] = None
+    instructions: Optional[str] = None
 

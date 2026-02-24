@@ -248,10 +248,15 @@ export const api = {
         return response.json();
     },
 
-    async ttsSpeak(text: string, voice?: string, signal?: AbortSignal): Promise<ArrayBuffer> {
+    async ttsSpeak(
+        text: string,
+        voice?: string,
+        instructions?: string,
+        signal?: AbortSignal
+    ): Promise<ArrayBuffer> {
         const response = await authenticatedFetch(`${API_URL}/api/tts/speak`, {
             method: 'POST',
-            body: JSON.stringify({ text, voice }),
+            body: JSON.stringify({ text, voice, instructions }),
             signal,
         });
         if (!response.ok) {

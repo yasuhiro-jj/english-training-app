@@ -38,10 +38,16 @@ async def speak(request: TtsSpeakRequest, user: dict = Depends(get_current_user)
         )
 
     try:
+        default_instructions = (
+            "Speak like a friendly native English narrator. "
+            "Use natural rhythm and intonation, not robotic. "
+            "Keep it clear and easy to follow for English learners."
+        )
         audio_bytes = await tts_service.speak_mp3(
             text,
             voice=request.voice or "alloy",
             model=request.model,
+            instructions=(request.instructions or default_instructions),
         )
         return Response(
             content=audio_bytes,

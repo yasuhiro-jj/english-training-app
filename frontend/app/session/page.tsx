@@ -94,6 +94,7 @@ function SessionPageInner() {
     const [sentences, setSentences] = useState<string[]>([]);
     const [readAloudError, setReadAloudError] = useState('');
     const [useHighQualityTts, setUseHighQualityTts] = useState(false);
+    const [ttsVoice, setTtsVoice] = useState<'cedar' | 'marin' | 'coral' | 'nova' | 'shimmer' | 'verse' | 'alloy'>('cedar');
     const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
     const playbackIdRef = useRef(0);
     const stopRequestedRef = useRef(false);
@@ -106,6 +107,24 @@ function SessionPageInner() {
     const audioRef = useRef<HTMLAudioElement | null>(null);
     const audioUrlRef = useRef<string | null>(null);
     const cloudAbortRef = useRef<AbortController | null>(null);
+
+    useEffect(() => {
+        // 高品質TTSの設定を復元（なければON推奨）
+        try {
+            const saved = localStorage.getItem('read_aloud_hq');
+            setUseHighQualityTts(saved === null ? true : saved === '1');
+        } catch {
+            setUseHighQualityTts(true);
+        }
+        try {
+            const v = localStorage.getItem('read_aloud_voice');
+            if (v === 'cedar' || v === 'marin' || v === 'coral' || v === 'nova' || v === 'shimmer' || v === 'verse' || v === 'alloy') {
+                setTtsVoice(v);
+            }
+        } catch {
+            // ignore
+        }
+    }, []);
 
     useEffect(() => {
         sentencesRef.current = sentences;
@@ -346,11 +365,46 @@ function SessionPageInner() {
                 return;
             }
 
+            const fallbackToSpeech = (reason?: string) => {
+                // 端末読み上げに切替
+                setUseHighQualityTts(false);
+                try {
+                    localStorage.setItem('read_aloud_hq', '0');
+                } catch {
+                    // ignore
+                }
+                if (reason) {
+                    setReadAloudError(`${reason}（端末音声で読み上げます）`);
+                }
+
+                const synth = getSpeechSynthesis();
+                if (!synth || typeof synth.speak !== 'function') return;
+
+                if (!voicesCacheRef.current) {
+                    try {
+                        const v = synth.getVoices?.() || [];
+                        if (v.length > 0) voicesCacheRef.current = v;
+                        else {
+                            void getVoicesWithWait(synth).then((vv) => {
+                                if (vv && vv.length > 0) voicesCacheRef.current = vv;
+                            });
+                        }
+                    } catch {
+                        // ignore
+                    }
+                }
+
+                speakSentenceSpeech(i);
+            };
+
             try {
                 const controller = new AbortController();
                 cloudAbortRef.current = controller;
 
-                const audioBuffer = await api.ttsSpeak(text, 'alloy', controller.signal);
+                const textForTts = text.replace(/([.!?])\s+/g, '$1\n').trim();
+                const instructions =
+                    'Speak like a friendly native English narrator. Use natural rhythm and intonation, not robotic. Keep it clear for English learners.';
+                const audioBuffer = await api.ttsSpeak(textForTts, ttsVoice, instructions, controller.signal);
                 if (controller.signal.aborted) return;
                 if (stopRequestedRef.current) return;
                 if (pauseRequestedRef.current) return;
@@ -445,7 +499,8 @@ function SessionPageInner() {
                 setIsStarting(false);
                 setIsPlaying(false);
                 setIsPaused(false);
-                setReadAloudError(e?.message || '音声生成に失敗しました');
+                // クラウドTTS失敗時は端末読み上げにフォールバック（音が出ない環境でも落ちない）
+                fallbackToSpeech(e?.message || '高品質（クラウド）読み上げに失敗しました');
             }
         };
 
@@ -1179,18 +1234,54 @@ function SessionPageInner() {
                                     </div>
                                 </div>
                                 <div className="mb-3 flex justify-end">
-                                    <label className="flex items-center gap-2 text-xs text-gray-600 select-none">
+                                    <div className="flex items-center gap-3">
+                                        <span className="text-[11px] text-gray-500">
+                                            読み上げ: {useHighQualityTts ? `クラウド（${ttsVoice}）` : '端末'}
+                                        </span>
+                                        {useHighQualityTts && (
+                                            <select
+                                                value={ttsVoice}
+                                                onChange={(e) => {
+                                                    const v = e.target.value as any;
+                                                    stopReading();
+                                                    setTtsVoice(v);
+                                                    try {
+                                                        localStorage.setItem('read_aloud_voice', String(v));
+                                                    } catch {
+                                                        // ignore
+                                                    }
+                                                }}
+                                                className="text-xs border border-gray-200 rounded-md px-2 py-1 bg-white text-gray-700"
+                                                title="高品質TTSの声"
+                                            >
+                                                <option value="cedar">cedar（推奨）</option>
+                                                <option value="marin">marin（推奨）</option>
+                                                <option value="coral">coral</option>
+                                                <option value="nova">nova</option>
+                                                <option value="shimmer">shimmer</option>
+                                                <option value="verse">verse</option>
+                                                <option value="alloy">alloy</option>
+                                            </select>
+                                        )}
+                                        <label className="flex items-center gap-2 text-xs text-gray-600 select-none">
                                         <input
                                             type="checkbox"
                                             checked={useHighQualityTts}
                                             onChange={(e) => {
                                                 stopReading();
-                                                setUseHighQualityTts(e.target.checked);
+                                                const next = e.target.checked;
+                                                setUseHighQualityTts(next);
+                                                try {
+                                                    localStorage.setItem('read_aloud_hq', next ? '1' : '0');
+                                                } catch {
+                                                    // ignore
+                                                }
                                             }}
                                             className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
                                         />
                                         高品質（クラウド）で読む
-                                    </label>
+                                        </label>
+                                    </div>
                                 </div>
                                 {readAloudError && (
                                     <div className="mb-4 text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-4 py-2">
