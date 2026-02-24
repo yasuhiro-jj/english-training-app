@@ -9,6 +9,14 @@ router = APIRouter(prefix="/api/webhooks", tags=["webhooks"])
 stripe_service = StripeService()
 
 
+@router.get("/stripe")
+async def stripe_webhook_health():
+    """
+    Stripe Webhook エンドポイントの疎通確認用
+    """
+    return {"status": "ok", "message": "Stripe webhook endpoint is ready"}
+
+
 @router.post("/stripe")
 async def stripe_webhook(request: Request):
     """
