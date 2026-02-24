@@ -10,8 +10,11 @@ venv/
 env/
 ENV/
 
-# Environment variables
+# Environment variables - APIキー等の機密情報を含むためリポジトリに含めない
 .env
+.env.local
+.env.*
+!.env.example
 
 # IDE
 .vscode/
