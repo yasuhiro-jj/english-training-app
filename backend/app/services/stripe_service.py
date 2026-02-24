@@ -108,8 +108,12 @@ class StripeService:
                 )
                 return False
 
+            # Railway側でINFOが出ない設定のことがあるのでWARNINGでも出す
+            logger.warning(
+                f"✅ Updated Notion subscription for {email}: plan={plan}, status={status}, page_id={user_id}"
+            )
             logger.info(
-                f"✅ Updated Notion subscription for {email}: plan={plan}, status={status}"
+                f"✅ Updated Notion subscription for {email}: plan={plan}, status={status}, page_id={user_id}"
             )
             return True
         except Exception as e:
@@ -287,6 +291,9 @@ class StripeService:
 
             price_id = items[0].get("price", {}).get("id", "")
             plan = self._map_price_to_plan(price_id)
+            logger.warning(
+                f"invoice.payment_succeeded: email={email}, subscription_id={subscription_id}, price_id={price_id}, plan={plan}"
+            )
 
             return await self.update_user_subscription_in_notion(
                 email=email, plan=plan, status="Active"
