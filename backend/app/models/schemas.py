@@ -96,3 +96,10 @@ class WhisperTranscribeResponse(BaseModel):
     usage_minutes: float  # 今回の使用分数（課金計算用）
     remaining_minutes: Optional[float] = None  # 残り分数（無料体験の場合）
 
+
+class TtsSpeakRequest(BaseModel):
+    """TTS（Read Aloud 高品質版）リクエスト"""
+    text: str
+    voice: Optional[str] = None
+    model: Optional[str] = None
+

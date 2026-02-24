@@ -5,7 +5,6 @@ import { useSearchParams } from 'next/navigation';
 import { api, LessonOption } from '../../lib/api';
 import AudioRecorder from '../../components/AudioRecorder';
 import { useRequireAuth } from '../lib/hooks/useRequireAuth';
-import { convertJapaneseNamesInText } from '../../lib/japaneseToRomaji';
 
 function normalizeString(value: unknown): string {
     return typeof value === 'string' ? value : '';
@@ -94,6 +93,7 @@ function SessionPageInner() {
     const [currentSentenceIndex, setCurrentSentenceIndex] = useState(0);
     const [sentences, setSentences] = useState<string[]>([]);
     const [readAloudError, setReadAloudError] = useState('');
+    const [useHighQualityTts, setUseHighQualityTts] = useState(false);
     const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
     const playbackIdRef = useRef(0);
     const stopRequestedRef = useRef(false);
@@ -103,6 +103,9 @@ function SessionPageInner() {
     const sentencesRef = useRef<string[]>([]);
     const voicesCacheRef = useRef<SpeechSynthesisVoice[] | null>(null);
     const speakWatchdogRef = useRef<number | null>(null);
+    const audioRef = useRef<HTMLAudioElement | null>(null);
+    const audioUrlRef = useRef<string | null>(null);
+    const cloudAbortRef = useRef<AbortController | null>(null);
 
     useEffect(() => {
         sentencesRef.current = sentences;
@@ -126,6 +129,36 @@ function SessionPageInner() {
             }
         } catch (e) {
             console.warn('[Session] speechSynthesis.cancel failed:', e);
+        }
+    };
+
+    const stopCloudAudio = () => {
+        try {
+            cloudAbortRef.current?.abort();
+        } catch {
+            // ignore
+        }
+        cloudAbortRef.current = null;
+
+        const a = audioRef.current;
+        if (a) {
+            try {
+                a.onended = null;
+                a.onplay = null;
+                a.onerror = null;
+                a.pause();
+                a.src = '';
+            } catch {
+                // ignore
+            }
+        }
+        if (audioUrlRef.current) {
+            try {
+                URL.revokeObjectURL(audioUrlRef.current);
+            } catch {
+                // ignore
+            }
+            audioUrlRef.current = null;
         }
     };
 
@@ -264,41 +297,7 @@ function SessionPageInner() {
     // Read Aloud コントロール関数
     const playFromSentence = (index: number) => {
         if (!currentLesson || sentences.length === 0) return;
-
-        // Check if speech synthesis is available
-        const synth = getSpeechSynthesis();
-        if (!synth || typeof synth.speak !== 'function') {
-            console.warn('[Session] speechSynthesis is not available');
-            const ua = getUA();
-            const isInApp =
-                /Line\//i.test(ua) ||
-                /FBAN|FBAV/i.test(ua) ||
-                /Instagram/i.test(ua) ||
-                /Twitter/i.test(ua);
-            setReadAloudError(
-                isInApp
-                    ? 'アプリ内ブラウザでは音声読み上げが使えないことがあります。右上メニューから「Safariで開く / Chromeで開く」をお試しください。'
-                    : 'このブラウザでは音声読み上げ（Read Aloud）が利用できません。Safari/Chromeでお試しください。'
-            );
-            return;
-        }
-
         setReadAloudError('');
-
-        // Kick off voice loading (do not await; keep user-gesture sync)
-        if (!voicesCacheRef.current) {
-            try {
-                const v = synth.getVoices?.() || [];
-                if (v.length > 0) voicesCacheRef.current = v;
-                else {
-                    void getVoicesWithWait(synth).then((vv) => {
-                        if (vv && vv.length > 0) voicesCacheRef.current = vv;
-                    });
-                }
-            } catch {
-                // ignore
-            }
-        }
 
         // 直前の再生を無効化（onendの連鎖を止める）
         playbackIdRef.current += 1;
@@ -308,6 +307,7 @@ function SessionPageInner() {
 
         clearSpeakWatchdog();
         safeCancelSpeech();
+        stopCloudAudio();
         // Start as "starting" until onstart fires (important for mobile UX)
         setIsStarting(true);
         setIsPlaying(false);
@@ -318,7 +318,138 @@ function SessionPageInner() {
 
         const playbackId = playbackIdRef.current;
 
-        const speakSentence = (i: number) => {
+        const speakSentenceCloud = async (i: number) => {
+            if (stopRequestedRef.current) return;
+            if (pauseRequestedRef.current) return;
+            if (playbackId !== playbackIdRef.current) return;
+
+            const list = sentencesRef.current;
+            if (!list || list.length === 0) return;
+
+            currentSentenceIndexRef.current = i;
+
+            if (i >= list.length) {
+                currentSentenceIndexRef.current = list.length;
+                setIsStarting(false);
+                setIsPlaying(false);
+                setIsPaused(false);
+                setCurrentSentenceIndex(list.length);
+                return;
+            }
+
+            const { text, nextIndex } = buildSpeechChunk(i);
+            if (!text) {
+                const nextIdx = Math.min(list.length, i + 1);
+                currentSentenceIndexRef.current = nextIdx;
+                setCurrentSentenceIndex(nextIdx);
+                await speakSentenceCloud(nextIdx);
+                return;
+            }
+
+            try {
+                const controller = new AbortController();
+                cloudAbortRef.current = controller;
+
+                const audioBuffer = await api.ttsSpeak(text, 'alloy', controller.signal);
+                if (controller.signal.aborted) return;
+                if (stopRequestedRef.current) return;
+                if (pauseRequestedRef.current) return;
+                if (playbackId !== playbackIdRef.current) return;
+
+                const blob = new Blob([audioBuffer], { type: 'audio/mpeg' });
+                const url = URL.createObjectURL(blob);
+                if (audioUrlRef.current) {
+                    try {
+                        URL.revokeObjectURL(audioUrlRef.current);
+                    } catch {
+                        // ignore
+                    }
+                }
+                audioUrlRef.current = url;
+
+                let a = audioRef.current;
+                if (!a) {
+                    a = new Audio();
+                    audioRef.current = a;
+                }
+
+                a.onplay = () => {
+                    clearSpeakWatchdog();
+                    currentSentenceIndexRef.current = i;
+                    setIsStarting(false);
+                    setIsPlaying(true);
+                    setIsPaused(false);
+                };
+
+                a.onended = () => {
+                    if (stopRequestedRef.current) return;
+                    if (pauseRequestedRef.current) return;
+                    if (playbackId !== playbackIdRef.current) return;
+                    clearSpeakWatchdog();
+                    currentSentenceIndexRef.current = nextIndex;
+                    setCurrentSentenceIndex(nextIndex);
+                    setTimeout(() => {
+                        void speakSentenceCloud(nextIndex);
+                    }, 60);
+                };
+
+                a.onerror = () => {
+                    if (pauseRequestedRef.current) return;
+                    if (stopRequestedRef.current) return;
+                    if (playbackId !== playbackIdRef.current) return;
+                    clearSpeakWatchdog();
+                    setIsStarting(false);
+                    setIsPlaying(false);
+                    setIsPaused(false);
+                    setReadAloudError('音読中にエラーが発生しました。別ブラウザ（Safari/Chrome）でお試しください。');
+                };
+
+                a.src = url;
+
+                clearSpeakWatchdog();
+                speakWatchdogRef.current = window.setTimeout(() => {
+                    if (stopRequestedRef.current) return;
+                    if (pauseRequestedRef.current) return;
+                    if (playbackId !== playbackIdRef.current) return;
+                    try {
+                        if (a && a.paused) {
+                            setIsStarting(false);
+                            setIsPlaying(false);
+                            setIsPaused(false);
+                            setReadAloudError('音読を開始できませんでした。スマホの場合は「消音解除」や音量、または別ブラウザ（Safari/Chrome）をお試しください。');
+                        }
+                    } catch {
+                        // ignore
+                    }
+                }, 1200);
+
+                const p = a.play();
+                if (p && typeof (p as any).catch === 'function') {
+                    (p as any).catch(() => {
+                        if (stopRequestedRef.current) return;
+                        if (pauseRequestedRef.current) return;
+                        if (playbackId !== playbackIdRef.current) return;
+                        clearSpeakWatchdog();
+                        setIsStarting(false);
+                        setIsPlaying(false);
+                        setIsPaused(false);
+                        setReadAloudError('音読を開始できませんでした。スマホの場合は「消音解除」や音量、または別ブラウザ（Safari/Chrome）をお試しください。');
+                    });
+                }
+            } catch (e: any) {
+                if (e?.name === 'AbortError') return;
+                if (stopRequestedRef.current) return;
+                if (pauseRequestedRef.current) return;
+                if (playbackId !== playbackIdRef.current) return;
+                clearSpeakWatchdog();
+                setIsStarting(false);
+                setIsPlaying(false);
+                setIsPaused(false);
+                setReadAloudError(e?.message || '音声生成に失敗しました');
+            }
+        };
+
+        const speakSentenceSpeech = (i: number) => {
             if (stopRequestedRef.current) return;
             if (pauseRequestedRef.current) return;
             if (playbackId !== playbackIdRef.current) return;
@@ -476,15 +607,73 @@ function SessionPageInner() {
             }, 900);
         };
 
-        speakSentence(startIndex);
+        if (useHighQualityTts) {
+            void speakSentenceCloud(startIndex);
+            return;
+        }
+
+        // Check if speech synthesis is available
+        const synth = getSpeechSynthesis();
+        if (!synth || typeof synth.speak !== 'function') {
+            console.warn('[Session] speechSynthesis is not available');
+            const ua = getUA();
+            const isInApp =
+                /Line\//i.test(ua) ||
+                /FBAN|FBAV/i.test(ua) ||
+                /Instagram/i.test(ua) ||
+                /Twitter/i.test(ua);
+            setIsStarting(false);
+            setIsPlaying(false);
+            setIsPaused(false);
+            setReadAloudError(
+                isInApp
+                    ? 'アプリ内ブラウザでは音声読み上げが使えないことがあります。右上メニューから「Safariで開く / Chromeで開く」をお試しください。'
+                    : 'このブラウザでは音声読み上げ（Read Aloud）が利用できません。Safari/Chromeでお試しください。'
+            );
+            return;
+        }
+
+        // Kick off voice loading (do not await; keep user-gesture sync)
+        if (!voicesCacheRef.current) {
+            try {
+                const v = synth.getVoices?.() || [];
+                if (v.length > 0) voicesCacheRef.current = v;
+                else {
+                    void getVoicesWithWait(synth).then((vv) => {
+                        if (vv && vv.length > 0) voicesCacheRef.current = vv;
+                    });
+                }
+            } catch {
+                // ignore
+            }
+        }
+
+        speakSentenceSpeech(startIndex);
     };
 
     const pauseReading = () => {
         // speaking中のみpause（paused中はresumeへ）
         if (isStarting) return;
         if (!isPlaying || isPaused) return;
+        if (useHighQualityTts) {
+            // クラウドTTSはHTMLAudioElementで制御
+            pausedSentenceIndexRef.current = currentSentenceIndexRef.current;
+            pauseRequestedRef.current = true;
+            try {
+                cloudAbortRef.current?.abort();
+            } catch {
+                // ignore
+            }
+            try {
+                audioRef.current?.pause();
+            } catch {
+                // ignore
+            }
+            setIsPaused(true);
+            setIsPlaying(false);
+            return;
+        }
         try {
-            const synth = getSpeechSynthesis();
             // pause/resumeは多くのブラウザで信頼性が低いため、cancelして現在位置を保持する方法に変更
             // これにより、再開時に確実に現在位置から再開できる
             // 現在の文のインデックスを ref に保存（state は非同期更新のため、同期的に更新される ref を使用）
@@ -528,6 +717,7 @@ function SessionPageInner() {
         playbackIdRef.current += 1;
         clearSpeakWatchdog();
         safeCancelSpeech();
+        stopCloudAudio();
         setIsStarting(false);
         setIsPlaying(false);
         setIsPaused(false);
@@ -542,6 +732,7 @@ function SessionPageInner() {
             // 再生中なら停止してから巻き戻し
             if (isPlaying || isPaused) {
                 safeCancelSpeech();
+                stopCloudAudio();
                 setIsPlaying(false);
                 setIsPaused(false);
             }
@@ -557,6 +748,7 @@ function SessionPageInner() {
             // 再生中なら停止してから早送り
             if (isPlaying || isPaused) {
                 safeCancelSpeech();
+                stopCloudAudio();
                 setIsPlaying(false);
                 setIsPaused(false);
             }
@@ -581,6 +773,7 @@ function SessionPageInner() {
     useEffect(() => {
         return () => {
             safeCancelSpeech();
+            stopCloudAudio();
         };
     }, []);
 
@@ -984,6 +1177,20 @@ function SessionPageInner() {
                                             </svg>
                                         </button>
                                     </div>
+                                </div>
+                                <div className="mb-3 flex justify-end">
+                                    <label className="flex items-center gap-2 text-xs text-gray-600 select-none">
+                                        <input
+                                            type="checkbox"
+                                            checked={useHighQualityTts}
+                                            onChange={(e) => {
+                                                stopReading();
+                                                setUseHighQualityTts(e.target.checked);
+                                            }}
+                                            className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                                        />
+                                        高品質（クラウド）で読む
+                                    </label>
                                 </div>
                                 {readAloudError && (
                                     <div className="mb-4 text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-4 py-2">

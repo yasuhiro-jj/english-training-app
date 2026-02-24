@@ -247,4 +247,17 @@ export const api = {
         }
         return response.json();
     },
+
+    async ttsSpeak(text: string, voice?: string, signal?: AbortSignal): Promise<ArrayBuffer> {
+        const response = await authenticatedFetch(`${API_URL}/api/tts/speak`, {
+            method: 'POST',
+            body: JSON.stringify({ text, voice }),
+            signal,
+        });
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.detail || '音声生成に失敗しました');
+        }
+        return response.arrayBuffer();
+    },
 };
