@@ -18,8 +18,21 @@ class StripeService:
             logger.warning("STRIPE_SECRET_KEY not configured")
 
         self.webhook_secret = os.getenv("STRIPE_WEBHOOK_SECRET")
-        self.notion_client = Client(auth=os.getenv("NOTION_TOKEN"))
+        self.notion_token = os.getenv("NOTION_TOKEN")
+        self.notion_client = Client(auth=self.notion_token) if self.notion_token else None
         self.user_db_id = os.getenv("NOTION_USER_DATABASE_ID")
+        self.user_email_property = os.getenv("NOTION_USER_EMAIL_PROPERTY", "Email")
+        self.subscription_plan_property = os.getenv(
+            "NOTION_SUBSCRIPTION_PLAN_PROPERTY", "Subscription Plan"
+        )
+        self.subscription_status_property = os.getenv(
+            "NOTION_SUBSCRIPTION_STATUS_PROPERTY", "Subscription Status"
+        )
+
+        if not self.user_db_id:
+            logger.warning("NOTION_USER_DATABASE_ID not configured")
+        if not self.notion_token:
+            logger.warning("NOTION_TOKEN not configured")
 
     def construct_event(self, payload: bytes, sig_header: str) -> Optional[Dict]:
         """
@@ -56,23 +69,44 @@ class StripeService:
             True if successful, False otherwise
         """
         try:
-            response = self.notion_client.databases.query(
-                database_id=self.user_db_id,
-                filter={"property": "Email", "rich_text": {"equals": email}},
-            )
-
-            if not response.get("results"):
-                logger.warning(f"User not found in Notion: {email}")
+            if not self.notion_client:
+                logger.error("Notion client not configured (missing NOTION_TOKEN)")
+                return False
+            if not self.user_db_id:
+                logger.error("Notion user database not configured (missing NOTION_USER_DATABASE_ID)")
                 return False
 
-            user_id = response["results"][0]["id"]
+            user_id = self._find_user_page_id_by_email(email)
+            if not user_id:
+                logger.warning(
+                    f"User not found in Notion by email. property={self.user_email_property}, email={email}"
+                )
+                return False
 
             update_props = {
-                "Subscription Plan": {"select": {"name": plan.capitalize()}},
-                "Subscription Status": {"select": {"name": status.capitalize()}},
+                self.subscription_plan_property: {"select": {"name": plan}},
+                self.subscription_status_property: {"select": {"name": status}},
             }
 
-            self.notion_client.pages.update(page_id=user_id, properties=update_props)
+            try:
+                self.notion_client.pages.update(page_id=user_id, properties=update_props)
+            except Exception as e:
+                # よくある表記ゆれ対応: Cancelled vs Canceled
+                msg = str(e)
+                if status == "Cancelled":
+                    update_props[self.subscription_status_property] = {
+                        "select": {"name": "Canceled"}
+                    }
+                    self.notion_client.pages.update(page_id=user_id, properties=update_props)
+                    logger.info(
+                        f"✅ Updated Notion subscription for {email}: plan={plan}, status=Canceled (fallback)"
+                    )
+                    return True
+
+                logger.error(
+                    f"Failed to update Notion page properties for {email} (plan={plan}, status={status}): {msg}"
+                )
+                return False
 
             logger.info(
                 f"✅ Updated Notion subscription for {email}: plan={plan}, status={status}"
@@ -81,6 +115,61 @@ class StripeService:
         except Exception as e:
             logger.error(f"Failed to update Notion subscription for {email}: {e}")
             return False
+
+    def _find_user_page_id_by_email(self, email: str) -> Optional[str]:
+        """
+        Notion DB内でユーザーをemailで検索してページIDを返す。
+        Notionのプロパティ型は環境により (email / rich_text / title) があり得るため順に試す。
+        """
+        if not self.notion_client or not self.user_db_id:
+            return None
+
+        prop_names = [p.strip() for p in self.user_email_property.split(",") if p.strip()]
+        if not prop_names:
+            prop_names = ["Email"]
+
+        def _first_result_id(resp: Dict) -> Optional[str]:
+            results = (resp or {}).get("results") or []
+            return results[0]["id"] if results else None
+
+        for prop in prop_names:
+            # 1) Email property type
+            try:
+                resp = self.notion_client.databases.query(
+                    database_id=self.user_db_id,
+                    filter={"property": prop, "email": {"equals": email}},
+                )
+                page_id = _first_result_id(resp)
+                if page_id:
+                    return page_id
+            except Exception:
+                pass
+
+            # 2) Rich text property type
+            try:
+                resp = self.notion_client.databases.query(
+                    database_id=self.user_db_id,
+                    filter={"property": prop, "rich_text": {"equals": email}},
+                )
+                page_id = _first_result_id(resp)
+                if page_id:
+                    return page_id
+            except Exception:
+                pass
+
+            # 3) Title property type
+            try:
+                resp = self.notion_client.databases.query(
+                    database_id=self.user_db_id,
+                    filter={"property": prop, "title": {"equals": email}},
+                )
+                page_id = _first_result_id(resp)
+                if page_id:
+                    return page_id
+            except Exception:
+                pass
+
+        return None
 
     async def handle_subscription_created(self, subscription: Dict) -> bool:
         """

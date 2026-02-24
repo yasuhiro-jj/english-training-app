@@ -53,10 +53,13 @@ async def health_check():
         "status": "healthy",
         "openai_configured": bool(os.getenv("OPENAI_API_KEY")),
         "notion_token_configured": bool(os.getenv("NOTION_TOKEN")),
+        "notion_user_db_configured": bool(os.getenv("NOTION_USER_DATABASE_ID")),
         "notion_db_conversation_id": bool(os.getenv("NOTION_CONVERSATION_DB_ID")),
         "notion_db_feedback_id": bool(os.getenv("NOTION_FEEDBACK_DB_ID")),
         "notion_db_lessons_id": bool(os.getenv("NOTION_LESSONS_DB_ID")),
         "notion_db_lessons_id_value": os.getenv("NOTION_LESSONS_DB_ID", "NOT_SET")[:20] + "..." if os.getenv("NOTION_LESSONS_DB_ID") else "NOT_SET",
+        "stripe_secret_configured": bool(os.getenv("STRIPE_SECRET_KEY")),
+        "stripe_webhook_secret_configured": bool(os.getenv("STRIPE_WEBHOOK_SECRET")),
     }
 
 if __name__ == "__main__":

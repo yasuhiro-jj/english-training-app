@@ -44,8 +44,10 @@ async def stripe_webhook(request: Request):
 
     event_type = event.get("type")
     event_data = event.get("data", {}).get("object", {})
+    event_id = event.get("id")
+    livemode = event.get("livemode")
 
-    logger.info(f"📩 Received Stripe event: {event_type}")
+    logger.info(f"📩 Received Stripe event: id={event_id}, type={event_type}, livemode={livemode}")
 
     try:
         if event_type == "customer.subscription.created":
@@ -61,6 +63,6 @@ async def stripe_webhook(request: Request):
 
         return {"status": "success", "event_type": event_type}
     except Exception as e:
-        logger.error(f"Error processing webhook {event_type}: {e}")
-        # Stripeには200を返して再送を防ぐ（内部エラーでも）
-        return {"status": "error", "message": str(e)}
+        logger.exception(f"Error processing webhook type={event_type}, id={event_id}: {e}")
+        # 失敗時は非2xxを返してStripeの自動リトライ/手動再送が効くようにする
+        raise HTTPException(status_code=500, detail="Webhook processing failed")
