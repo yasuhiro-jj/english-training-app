@@ -179,12 +179,14 @@ function SessionPageInner() {
 
         const score = (v: SpeechSynthesisVoice) => {
             const name = v.name || "";
-            // Heuristics: many browsers have higher quality voices labeled like these
+            // より自然な音声を優先（Neural/Premium/Enhanced が最も流暢）
+            if (/Neural|Premium|Enhanced/i.test(name)) return 110;
             if (/Google US English/i.test(name)) return 100;
-            if (/Google/i.test(name)) return 90;
-            if (/Microsoft/i.test(name)) return 80;
-            if (/Natural/i.test(name)) return 70;
-            if (v.localService === false) return 60;
+            if (/Google/i.test(name)) return 95;
+            if (/Microsoft.*Natural|Samantha|Karen|Daniel/i.test(name)) return 90;
+            if (/Microsoft/i.test(name)) return 85;
+            if (/Natural/i.test(name)) return 80;
+            if (v.localService === false) return 65;
             return 50;
         };
 
@@ -236,7 +238,7 @@ function SessionPageInner() {
         });
     };
 
-    const buildSpeechChunk = (startIndex: number, maxChars = 260, maxSentences = 3) => {
+    const buildSpeechChunk = (startIndex: number, maxChars = 320, maxSentences = 4) => {
         const list = sentencesRef.current || [];
         let text = "";
         let idx = Math.max(0, startIndex);
@@ -363,10 +365,10 @@ function SessionPageInner() {
             }
 
             const utterance = new UtteranceCtor(text) as SpeechSynthesisUtterance;
-            // Naturalness tuning: sentence-by-sentence + modest pace
+            // より流暢な読み上げ: 自然な速度・抑揚
             utterance.lang = 'en-US';
-            utterance.rate = 0.92;
-            utterance.pitch = 1.0;
+            utterance.rate = 0.98;
+            utterance.pitch = 1.02;
             utterance.volume = 1.0;
 
             utterance.onend = () => {
@@ -385,8 +387,8 @@ function SessionPageInner() {
                     return;
                 }
 
-                // Small pause between chunks improves naturalness
-                setTimeout(() => speakSentence(nextIndex), 220);
+                // チャンク間の間隔を短くして流れを自然に
+                setTimeout(() => speakSentence(nextIndex), 120);
             };
 
             utterance.onerror = (e) => {
@@ -428,8 +430,6 @@ function SessionPageInner() {
             try {
                 const ua = getUA();
                 const isIOS = /iPad|iPhone|iPod/i.test(ua);
-                // iOS Safari is prone to silent failures when explicitly setting utterance.voice.
-                // Prefer letting it choose the default voice on iOS.
                 if (!isIOS) {
                     const voices = voicesCacheRef.current || (synth.getVoices?.() || []);
                     const v = pickEnglishVoice(voices);
