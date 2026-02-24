@@ -529,7 +529,7 @@ function SessionPageInner() {
                 const nextIdx = Math.min(list.length, i + 1);
                 currentSentenceIndexRef.current = nextIdx;
                 setCurrentSentenceIndex(nextIdx);
-                speakSentence(nextIdx);
+                speakSentenceSpeech(nextIdx);
                 return;
             }
 
@@ -574,7 +574,7 @@ function SessionPageInner() {
                 }
 
                 // チャンク間の間隔を短くして流れを自然に
-                setTimeout(() => speakSentence(nextIndex), 120);
+                setTimeout(() => speakSentenceSpeech(nextIndex), 120);
             };
 
             utterance.onerror = (e) => {
