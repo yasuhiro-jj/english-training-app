@@ -267,7 +267,11 @@ class StripeService:
                 return False
 
             customer = stripe.Customer.retrieve(customer_id)
-            email = customer.get("email")
+            email = (
+                customer.get("email")
+                or invoice.get("customer_email")
+                or (invoice.get("customer_details") or {}).get("email")
+            )
             if not email:
                 return False
 

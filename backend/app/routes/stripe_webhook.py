@@ -50,16 +50,23 @@ async def stripe_webhook(request: Request):
     logger.info(f"📩 Received Stripe event: id={event_id}, type={event_type}, livemode={livemode}")
 
     try:
+        ok = True
         if event_type == "customer.subscription.created":
-            await stripe_service.handle_subscription_created(event_data)
+            ok = await stripe_service.handle_subscription_created(event_data)
         elif event_type == "customer.subscription.updated":
-            await stripe_service.handle_subscription_updated(event_data)
+            ok = await stripe_service.handle_subscription_updated(event_data)
         elif event_type == "customer.subscription.deleted":
-            await stripe_service.handle_subscription_deleted(event_data)
+            ok = await stripe_service.handle_subscription_deleted(event_data)
         elif event_type == "invoice.payment_succeeded":
-            await stripe_service.handle_invoice_payment_succeeded(event_data)
+            ok = await stripe_service.handle_invoice_payment_succeeded(event_data)
         else:
             logger.info(f"Unhandled event type: {event_type}")
+
+        if ok is False:
+            logger.error(
+                f"Webhook handler returned False. type={event_type}, id={event_id}"
+            )
+            raise HTTPException(status_code=500, detail="Webhook handler failed")
 
         return {"status": "success", "event_type": event_type}
     except Exception as e:
