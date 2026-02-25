@@ -496,17 +496,17 @@ export default function LandingPage() {
                 <div className="w-20 h-20 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-full flex items-center justify-center mb-6">
                   <Briefcase className="w-10 h-10 text-white" />
                 </div>
-                <div>
-                  <h3 className="text-2xl font-bold text-gray-900 mb-4">
+                <div className="text-center max-w-3xl mx-auto">
+                  <h3 className="text-2xl font-bold text-gray-900 mb-6">
                     表面的な会話を超えて、真の自分を伝えられた瞬間
                   </h3>
-                  <p className="text-gray-700 leading-relaxed mb-4">
+                  <p className="text-gray-700 leading-relaxed mb-4 text-center">
                     開発者自身の原体験として、長年英語を学んできたものの、ビジネスの場面で表面的な会話に終始してしまうことに悩んでいました。
                   </p>
-                  <p className="text-gray-700 leading-relaxed mb-4">
+                  <p className="text-gray-700 leading-relaxed mb-4 text-center">
                     しかし、世界のニュースを題材に深い議論を重ねることで、自分の考えや価値観を英語で表現できるようになりました。
                   </p>
-                  <p className="text-gray-700 leading-relaxed">
+                  <p className="text-gray-700 leading-relaxed text-center">
                     <span className="font-semibold text-indigo-600">その瞬間、真の自分を伝えられ、信頼関係が生まれ、ビジネスが好転した。</span>
                     この体験を多くのビジネスマンに届けたいという想いから、このアプリを開発しました。
                   </p>
