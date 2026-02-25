@@ -477,36 +477,36 @@ export default function LandingPage() {
       </section>
 
       {/* Trust & Story Section */}
-      <section className="py-16 px-6 bg-gradient-to-b from-indigo-50 to-white">
+      <section className="py-12 sm:py-16 px-4 sm:px-6 bg-gradient-to-b from-indigo-50 to-white">
         <div className="max-w-6xl mx-auto">
           <FadeInUp>
             <div className="text-center mb-8">
               <div className="inline-block px-4 py-2 bg-indigo-100 text-indigo-700 rounded-full text-sm font-bold mb-4">
                 信頼・実績
               </div>
-              <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-4">
+              <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900 mb-4">
                 開発者ストーリー
               </h2>
             </div>
           </FadeInUp>
 
           <FadeInUp delay={0.2}>
-            <div className="bg-white rounded-2xl p-10 shadow-xl border border-gray-200 max-w-4xl mx-auto">
+            <div className="bg-white rounded-2xl p-6 sm:p-8 md:p-10 shadow-xl border border-gray-200 max-w-4xl mx-auto">
               <div className="flex flex-col items-center text-center">
-                <div className="w-20 h-20 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-full flex items-center justify-center mb-6">
-                  <Briefcase className="w-10 h-10 text-white" />
+                <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-full flex items-center justify-center mb-6">
+                  <Briefcase className="w-8 h-8 sm:w-10 sm:h-10 text-white" />
                 </div>
                 <div className="text-center max-w-3xl mx-auto">
-                  <h3 className="text-2xl font-bold text-gray-900 mb-6">
+                  <h3 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900 mb-4 sm:mb-6">
                     表面的な会話を超えて、真の自分を伝えられた瞬間
                   </h3>
-                  <p className="text-gray-700 leading-relaxed mb-4 text-center">
-                    開発者自身の原体験として、長年英語を学んできたものの、ビジネスの場面で表面的な会話に終始してしまうことに悩んでいました。
+                  <p className="text-sm sm:text-base text-gray-700 leading-relaxed mb-4 text-center">
+                    開発者自身の原体験として、長年英語を学んできた<br />ものの、<br />ビジネスの場面で表面的な会話に終始してしまうことに悩んでいました。
                   </p>
-                  <p className="text-gray-700 leading-relaxed mb-4 text-center">
-                    しかし、世界のニュースを題材に深い議論を重ねることで、自分の考えや価値観を英語で表現できるようになりました。
+                  <p className="text-sm sm:text-base text-gray-700 leading-relaxed mb-4 text-center">
+                    しかし、世界のニュースを題材に深い議論を<br />重ねることで、<br />自分の考えや価値観を英語で表現できるようになりました。
                   </p>
-                  <p className="text-gray-700 leading-relaxed text-center">
+                  <p className="text-sm sm:text-base text-gray-700 leading-relaxed text-center">
                     <span className="font-semibold text-indigo-600">その瞬間、真の自分を伝えられ、信頼関係が生まれ、ビジネスが好転した。</span>
                     この体験を多くのビジネスマンに届けたいという想いから、このアプリを開発しました。
                   </p>
