@@ -17,7 +17,9 @@ class StripeService:
         else:
             logger.warning("STRIPE_SECRET_KEY not configured")
 
-        self.webhook_secret = os.getenv("STRIPE_WEBHOOK_SECRET")
+        # 複数Webhookシークレット対応（例: "whsec_test...,whsec_live..."）
+        webhook_secret_raw = os.getenv("STRIPE_WEBHOOK_SECRET", "")
+        self.webhook_secrets = [s.strip() for s in webhook_secret_raw.split(",") if s.strip()]
         self.notion_token = os.getenv("NOTION_TOKEN")
         self.notion_client = Client(auth=self.notion_token) if self.notion_token else None
         self.user_db_id = os.getenv("NOTION_USER_DATABASE_ID")
@@ -39,20 +41,23 @@ class StripeService:
         """
         Webhook署名を検証してイベントを構築
         """
-        if not self.webhook_secret:
+        if not self.webhook_secrets:
             logger.error("STRIPE_WEBHOOK_SECRET not configured")
             return None
 
         try:
-            event = stripe.Webhook.construct_event(
-                payload, sig_header, self.webhook_secret
-            )
-            return event
+            last_err: Optional[Exception] = None
+            for secret in self.webhook_secrets:
+                try:
+                    event = stripe.Webhook.construct_event(payload, sig_header, secret)
+                    return event
+                except stripe.error.SignatureVerificationError as e:
+                    last_err = e
+                    continue
+            logger.error(f"Invalid signature: {last_err}")
+            return None
         except ValueError as e:
             logger.error(f"Invalid payload: {e}")
-            return None
-        except stripe.error.SignatureVerificationError as e:
-            logger.error(f"Invalid signature: {e}")
             return None
 
     async def update_user_subscription_in_notion(
@@ -393,6 +398,11 @@ class StripeService:
             "price_1SwjLTEiUgLSKtAjTjTqh8w8": "Premium",  # 年額 ¥49,800
             # 新規テスト price（Basic 月額 2999円 テスト２）
             "price_1T4LhqEiUgLSKtAjqiTGPPaL": "Basic",
+            # 本番 price_id（ユーザー提示）
+            "price_1T4iQ4EiUgLSKtAjUy36avnS": "Basic",    # 月額 ¥2,980
+            "price_1T4iQoEiUgLSKtAjgjqiq0vh": "Basic",    # 年額 ¥29,800
+            "price_1T4iSsEiUgLSKtAjIaQyyHBJ": "Premium",  # 月額 ¥4,980
+            "price_1T4iTIEiUgLSKtAjid7Dxi8R": "Premium",  # 年額 ¥49,800
         }
         
         plan = PRICE_MAP.get(price_id)
