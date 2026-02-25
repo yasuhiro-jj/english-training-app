@@ -18,7 +18,7 @@ const PLANS: PlanCard[] = [
     priceMain: '¥2,980',
     priceSub: '/月',
     description: '月額制のプランです。いつでもキャンセル可能です。',
-    href: 'https://buy.stripe.com/test_5kQ5kD0ev8BX41pbgw5gc01',
+    href: 'https://buy.stripe.com/cNi5kD8L16tPapN5Wc5gc04',
     theme: 'indigo',
   },
   {
@@ -29,7 +29,7 @@ const PLANS: PlanCard[] = [
     priceSub: '/年',
     badge: 'お得',
     description: '1年分をまとめて購入。月額より約17%お得です。',
-    href: 'https://buy.stripe.com/5kQ5kD0ev8BX41pbgw5gc01',
+    href: 'https://buy.stripe.com/4gM28r0evbO99lJ4S85gc05',
     theme: 'indigo',
   },
   {
@@ -39,7 +39,7 @@ const PLANS: PlanCard[] = [
     priceMain: '¥4,980',
     priceSub: '/月',
     description: '月額制のプランです。いつでもキャンセル可能です。',
-    href: 'https://buy.stripe.com/00w28rd1h9G1eG3bgw5gc02',
+    href: 'https://buy.stripe.com/00w00j0ev05rcxV84k5gc06',
     theme: 'purple',
   },
   {
@@ -50,7 +50,7 @@ const PLANS: PlanCard[] = [
     priceSub: '/年',
     badge: 'お得',
     description: '1年分をまとめて購入。月額より約17%お得です。',
-    href: 'https://buy.stripe.com/9B65kD1izg4p55t84k5gc03',
+    href: 'https://buy.stripe.com/14A6oHd1h5pL2Xl2K05gc07',
     theme: 'purple',
   },
 ];
