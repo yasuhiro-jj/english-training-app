@@ -1,7 +1,7 @@
 import stripe
 import os
 import logging
-from typing import Dict, Optional
+from typing import Dict, Optional, Tuple
 from notion_client import Client
 
 logger = logging.getLogger(__name__)
@@ -28,6 +28,7 @@ class StripeService:
         self.subscription_status_property = os.getenv(
             "NOTION_SUBSCRIPTION_STATUS_PROPERTY", "Subscription Status"
         )
+        self._user_db_title_property: Optional[str] = None
 
         if not self.user_db_id:
             logger.warning("NOTION_USER_DATABASE_ID not configured")
@@ -79,9 +80,12 @@ class StripeService:
             user_id = self._find_user_page_id_by_email(email)
             if not user_id:
                 logger.warning(
-                    f"User not found in Notion by email. property={self.user_email_property}, email={email}"
+                    f"User not found in Notion by email. property={self.user_email_property}, email={email}. Creating new user page..."
                 )
-                return False
+                user_id = self._create_user_page_with_email(email)
+                if not user_id:
+                    logger.error(f"Failed to create Notion user page for email={email}")
+                    return False
 
             update_props = {
                 self.subscription_plan_property: {"select": {"name": plan}},
@@ -172,6 +176,80 @@ class StripeService:
                     return page_id
             except Exception:
                 pass
+
+        return None
+
+    def _get_user_db_title_property(self) -> Optional[str]:
+        """
+        Notion DB の title プロパティ名を取得（ページ作成に必須）。
+        取得できなければ一般的な 'Name' を試す。
+        """
+        if self._user_db_title_property is not None:
+            return self._user_db_title_property
+        if not self.notion_client or not self.user_db_id:
+            self._user_db_title_property = None
+            return None
+
+        try:
+            db = self.notion_client.databases.retrieve(database_id=self.user_db_id)
+            props = (db or {}).get("properties") or {}
+            for prop_name, prop_def in props.items():
+                if (prop_def or {}).get("type") == "title":
+                    self._user_db_title_property = prop_name
+                    return prop_name
+        except Exception as e:
+            logger.warning(f"Failed to retrieve Notion user DB schema: {e}")
+
+        # フォールバック
+        self._user_db_title_property = "Name"
+        return self._user_db_title_property
+
+    def _build_email_property_payload(self, email: str, prop_name: str, prop_type: str) -> Dict:
+        if prop_type == "email":
+            return {prop_name: {"email": email}}
+        if prop_type == "rich_text":
+            return {prop_name: {"rich_text": [{"text": {"content": email}}]}}
+        if prop_type == "title":
+            return {prop_name: {"title": [{"text": {"content": email}}]}}
+        raise ValueError(f"Unsupported email property type: {prop_type}")
+
+    def _create_user_page_with_email(self, email: str) -> Optional[str]:
+        """
+        Notion ユーザーDBに、Email=Stripeのメールで新規ページ（新規行）を作成する。
+        Emailプロパティの型が (email / rich_text / title) のいずれでも動くように試行する。
+        """
+        if not self.notion_client or not self.user_db_id:
+            return None
+
+        # title プロパティ（必須）
+        title_prop = self._get_user_db_title_property()
+        title_payload = {}
+        if title_prop:
+            title_payload = {title_prop: {"title": [{"text": {"content": email}}]}}
+
+        prop_names = [p.strip() for p in self.user_email_property.split(",") if p.strip()]
+        if not prop_names:
+            prop_names = ["Email"]
+
+        # Emailプロパティは型が分からないことがあるので順に試す
+        attempts: Tuple[Tuple[str, str], ...] = (("email", "email"), ("rich_text", "rich_text"), ("title", "title"))
+        for prop in prop_names:
+            for notion_filter_key, notion_type in attempts:
+                try:
+                    email_payload = self._build_email_property_payload(email, prop, notion_type)
+                    props = {**title_payload, **email_payload}
+                    created = self.notion_client.pages.create(
+                        parent={"database_id": self.user_db_id},
+                        properties=props,
+                    )
+                    page_id = (created or {}).get("id")
+                    if page_id:
+                        logger.warning(f"✅ Created Notion user page for email={email}, page_id={page_id}")
+                        return page_id
+                except Exception as e:
+                    # 次の型/プロパティ名を試す
+                    logger.info(f"Notion create attempt failed. prop={prop}, type={notion_filter_key}: {e}")
+                    continue
 
         return None
 
@@ -313,6 +391,8 @@ class StripeService:
             # Premium プラン
             "price_1SwjLTEiUgLSKtAjfQJ1P2uI": "Premium",  # 月額 ¥4,980
             "price_1SwjLTEiUgLSKtAjTjTqh8w8": "Premium",  # 年額 ¥49,800
+            # 新規テスト price（Basic 月額 2999円 テスト２）
+            "price_1T4LhqEiUgLSKtAjqiTGPPaL": "Basic",
         }
         
         plan = PRICE_MAP.get(price_id)
