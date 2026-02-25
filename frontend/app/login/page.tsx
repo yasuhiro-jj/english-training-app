@@ -79,7 +79,7 @@ export default function LoginPage() {
                             Welcome Back
                         </h1>
                         <p className="text-gray-600 text-sm font-medium">
-                            Daily News English Training にログイン
+                            DeepSpeak にログイン
                         </p>
                     </div>
 

@@ -70,7 +70,7 @@ export default function SignupPage() {
                             Create Account
                         </h1>
                         <p className="text-indigo-100/60 text-sm font-medium">
-                            Daily News English Training に参加する
+                            DeepSpeak に参加する
                         </p>
                     </div>
 

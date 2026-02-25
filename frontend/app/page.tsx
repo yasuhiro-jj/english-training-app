@@ -78,7 +78,7 @@ export default function LandingPage() {
             <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-xl flex items-center justify-center">
               <BookOpen className="w-4 h-4 sm:w-6 sm:h-6 text-white" />
             </div>
-            <span className="text-base sm:text-lg md:text-xl font-bold text-gray-900">Daily News English</span>
+            <span className="text-base sm:text-lg md:text-xl font-bold text-gray-900">DeepSpeak</span>
           </div>
           <div className="flex items-center space-x-2 sm:space-x-4">
             {user ? (
@@ -118,20 +118,19 @@ export default function LandingPage() {
           </FadeInUp>
           
           <FadeInUp delay={0.1}>
-            <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-black text-gray-900 mb-6 leading-tight px-4 max-w-5xl mx-auto">
-              表面的な会話を超えて、<br />
+            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-black text-gray-900 mb-4 leading-tight px-4 max-w-5xl mx-auto">
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600">
-                英語で<br />"本当のあなた"<br />を伝えたい
+                DeepSpeak
               </span>
-              <br />ビジネスマンへ
             </h1>
           </FadeInUp>
           
           <FadeInUp delay={0.2}>
-            <p className="text-base sm:text-lg md:text-xl text-gray-700 mb-8 leading-relaxed max-w-4xl mx-auto px-4">
-              天気や趣味の話だけでいいですか？<br />
-              世界のニュースを題材に、日本語で考えるような深い会話を英語で実現し、<br />
-              <span className="font-semibold text-gray-900">真のあなたを知ってもらう<br />議論力を身につける。</span>
+            <p className="text-xl sm:text-2xl md:text-3xl text-gray-900 font-bold mb-4 leading-relaxed max-w-4xl mx-auto px-4">
+              世界で通用する深い議論力を身につける
+            </p>
+            <p className="text-base sm:text-lg md:text-xl text-indigo-600 font-semibold mb-8 max-w-3xl mx-auto px-4">
+              Business English for Professionals
             </p>
           </FadeInUp>
 
@@ -567,9 +566,9 @@ export default function LandingPage() {
             <div className="w-8 h-8 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-lg flex items-center justify-center">
               <BookOpen className="w-5 h-5 text-white" />
             </div>
-            <span className="text-white font-bold">Daily News English</span>
+            <span className="text-white font-bold">DeepSpeak</span>
           </div>
-          <p className="text-sm">© 2026 Daily News English. All rights reserved.</p>
+          <p className="text-sm">© 2026 DeepSpeak. All rights reserved.</p>
         </div>
       </footer>
     </main>

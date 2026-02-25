@@ -18,10 +18,10 @@ export default function Header() {
                 <div className="flex items-center space-x-3 sm:space-x-8">
                     <Link href="/" className="flex items-center space-x-1.5 sm:space-x-2 group">
                         <div className="w-7 h-7 sm:w-8 sm:h-8 bg-indigo-600 rounded-lg flex items-center justify-center group-hover:bg-indigo-500 transition-colors">
-                            <span className="text-white font-black text-[10px] sm:text-xs">DN</span>
+                            <span className="text-white font-black text-[10px] sm:text-xs">DS</span>
                         </div>
                         <span className="text-white font-bold tracking-tight text-xs sm:text-sm hidden sm:block">
-                            Daily News English
+                            DeepSpeak
                         </span>
                     </Link>
 

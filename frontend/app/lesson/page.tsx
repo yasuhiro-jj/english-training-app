@@ -132,7 +132,7 @@ function LessonPageContent() {
             ダッシュボードに戻る
           </Link>
           <h1 className="text-4xl md:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-white via-indigo-100 to-blue-200 mb-2">
-            Daily News English
+            DeepSpeak
           </h1>
           <p className="text-indigo-100/60 text-lg">
             最新ニュースから自動で英語レッスンを生成します

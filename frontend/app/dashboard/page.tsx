@@ -77,8 +77,8 @@ export default function DashboardPage() {
                     >
                         <div className="relative z-10 flex flex-col gap-4">
                             <div>
-                                <h2 className="text-2xl font-black text-white mb-2 italic">Daily News English</h2>
-                                <p className="text-emerald-100 text-sm font-medium opacity-80 uppercase tracking-widest mb-4">Generate lesson from news articles</p>
+                                <h2 className="text-2xl font-black text-white mb-2 italic">DeepSpeak</h2>
+                                <p className="text-emerald-100 text-sm font-medium opacity-80 uppercase tracking-widest mb-4">Business English for Professionals</p>
                                 <div className="flex items-center space-x-2 mb-4">
                                     <label htmlFor="lesson-level" className="text-white font-medium">難易度:</label>
                                     <select
