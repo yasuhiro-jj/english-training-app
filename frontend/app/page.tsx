@@ -567,6 +567,14 @@ export default function LandingPage() {
             </div>
             <span className="text-white font-bold">DeepSpeak</span>
           </div>
+          <div className="mb-4">
+            <Link
+              href="/feedback"
+              className="inline-flex items-center justify-center px-4 py-2 bg-white text-gray-900 hover:bg-gray-100 transition-colors rounded-full text-sm font-semibold"
+            >
+              フィードバックを送る
+            </Link>
+          </div>
           <p className="text-sm">© 2026 DeepSpeak. All rights reserved.</p>
         </div>
       </footer>

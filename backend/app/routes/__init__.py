@@ -8,5 +8,6 @@ from .dashboard import router as dashboard_router
 from .lesson import router as lesson_router
 from .tts import router as tts_router
 from .stripe_webhook import router as stripe_webhook_router
+from .feedback import router as feedback_router
 
-__all__ = ["session_router", "auth_router", "chat_router", "dashboard_router", "lesson_router", "tts_router", "stripe_webhook_router"]
+__all__ = ["session_router", "auth_router", "chat_router", "dashboard_router", "lesson_router", "tts_router", "stripe_webhook_router", "feedback_router"]

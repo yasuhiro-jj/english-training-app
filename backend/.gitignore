@@ -25,3 +25,7 @@ ENV/
 # OS
 .DS_Store
 Thumbs.db
+
+# ローカル診断・テスト用（本番には不要）
+diagnose_feedback.py
+test_feedback_*.py
