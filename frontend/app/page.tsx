@@ -141,7 +141,7 @@ export default function LandingPage() {
           </FadeInUp>
           
           <FadeInUp delay={0.1}>
-            <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-black text-gray-900 mb-3 leading-tight px-2 max-w-5xl mx-auto">
+            <h1 className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl xl:text-9xl font-black text-gray-900 mb-3 leading-tight px-2 max-w-5xl mx-auto">
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600">
                 DeepSpeak
               </span>
@@ -150,7 +150,7 @@ export default function LandingPage() {
           
           <FadeInUp delay={0.2}>
             <p className="text-xl text-gray-900 font-bold mb-3 leading-relaxed px-2 max-w-4xl mx-auto">
-              世界で通用する深い議論力を身につける
+              世界で通用する<br />深い議論力を身につける
             </p>
             <p className="text-base text-indigo-600 font-semibold mb-6 px-2 max-w-3xl mx-auto">
               Business English for Professionals
