@@ -6,28 +6,6 @@ import { ArrowRight, Brain, Zap, Globe, BookOpen, MessageSquare, TrendingUp, Che
 import Link from 'next/link';
 import { useAuth } from './lib/auth-context';
 
-// 開発用のウィンドウサイズ表示コンポーネント
-const ViewportSize = () => {
-  const [size, setSize] = React.useState({ width: 0, height: 0 });
-
-  React.useEffect(() => {
-    const updateSize = () => {
-      setSize({ width: window.innerWidth, height: window.innerHeight });
-    };
-    window.addEventListener('resize', updateSize);
-    updateSize(); // 初期描画時にサイズを設定
-    return () => window.removeEventListener('resize', updateSize);
-  }, []);
-
-  if (size.width === 0) return null; // 初期値が表示されないように
-
-  return (
-    <div className="fixed bottom-4 right-4 bg-gray-800 text-white px-3 py-1 text-xs rounded-md z-50">
-      {size.width}px × {size.height}px
-    </div>
-  );
-};
-
 // アニメーション用のコンポーネント
 const FadeInUp = ({ children, delay = 0 }: { children: React.ReactNode; delay?: number }) => (
   <motion.div
@@ -93,7 +71,6 @@ export default function LandingPage() {
 
   return (
     <main className="w-full min-h-screen bg-white text-gray-900 overflow-x-hidden">
-      <ViewportSize /> {/* ビューポートサイズ表示コンポーネント */}
       {/* Header */}
       <header className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 py-2 flex items-center justify-between">
