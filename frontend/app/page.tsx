@@ -6,6 +6,28 @@ import { ArrowRight, Brain, Zap, Globe, BookOpen, MessageSquare, TrendingUp, Che
 import Link from 'next/link';
 import { useAuth } from './lib/auth-context';
 
+// 開発用のウィンドウサイズ表示コンポーネント
+const ViewportSize = () => {
+  const [size, setSize] = React.useState({ width: 0, height: 0 });
+
+  React.useEffect(() => {
+    const updateSize = () => {
+      setSize({ width: window.innerWidth, height: window.innerHeight });
+    };
+    window.addEventListener('resize', updateSize);
+    updateSize(); // 初期描画時にサイズを設定
+    return () => window.removeEventListener('resize', updateSize);
+  }, []);
+
+  if (size.width === 0) return null; // 初期値が表示されないように
+
+  return (
+    <div className="fixed bottom-4 right-4 bg-gray-800 text-white px-3 py-1 text-xs rounded-md z-50">
+      {size.width}px × {size.height}px
+    </div>
+  );
+};
+
 // アニメーション用のコンポーネント
 const FadeInUp = ({ children, delay = 0 }: { children: React.ReactNode; delay?: number }) => (
   <motion.div
@@ -71,20 +93,21 @@ export default function LandingPage() {
 
   return (
     <main className="w-full min-h-screen bg-white text-gray-900 overflow-x-hidden">
+      <ViewportSize /> {/* ビューポートサイズ表示コンポーネント */}
       {/* Header */}
       <header className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-2 sm:py-3 flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-4 py-2 flex items-center justify-between">
           <div className="flex items-center space-x-2">
-            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-xl flex items-center justify-center">
-              <BookOpen className="w-4 h-4 sm:w-6 sm:h-6 text-white" />
+            <div className="w-8 h-8 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-xl flex items-center justify-center">
+              <BookOpen className="w-4 h-4 text-white" />
             </div>
-            <span className="text-base sm:text-lg md:text-xl font-bold text-gray-900">DeepSpeak</span>
+            <span className="text-base font-bold text-gray-900">DeepSpeak</span>
           </div>
-          <div className="flex items-center space-x-2 sm:space-x-4">
+          <div className="flex items-center space-x-2">
             {user ? (
               <Link
                 href="/dashboard"
-                className="px-4 sm:px-6 py-1.5 sm:py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm sm:text-base font-bold rounded-full transition-colors"
+                className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold rounded-full transition-colors"
               >
                 ダッシュボードへ
               </Link>
@@ -92,13 +115,13 @@ export default function LandingPage() {
               <>
                 <Link
                   href="/login"
-                  className="text-gray-700 hover:text-gray-900 text-sm sm:text-base font-semibold transition-colors"
+                  className="text-gray-700 hover:text-gray-900 text-sm font-semibold transition-colors"
                 >
                   ログイン
                 </Link>
                 <Link
                   href="/signup"
-                  className="px-4 sm:px-6 py-1.5 sm:py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm sm:text-base font-bold rounded-full transition-colors"
+                  className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold rounded-full transition-colors"
                 >
                   無料で始める
                 </Link>
@@ -109,16 +132,16 @@ export default function LandingPage() {
       </header>
 
       {/* Hero Section */}
-      <section className="pt-40 pb-20 px-6 bg-gradient-to-b from-indigo-50 to-white">
+      <section className="pt-32 pb-16 px-4 bg-gradient-to-b from-indigo-50 to-white">
         <div className="max-w-6xl mx-auto text-center">
           <FadeInUp>
-            <div className="inline-block px-4 py-2 bg-indigo-100 text-indigo-700 rounded-full text-sm font-bold mb-4">
+            <div className="inline-block px-3 py-1.5 bg-indigo-100 text-indigo-700 rounded-full text-xs font-bold mb-3">
               中上級ビジネスマン向け
             </div>
           </FadeInUp>
           
           <FadeInUp delay={0.1}>
-            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-black text-gray-900 mb-4 leading-tight px-4 max-w-5xl mx-auto">
+            <h1 className="text-4xl font-black text-gray-900 mb-3 leading-tight px-2 max-w-5xl mx-auto">
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600">
                 DeepSpeak
               </span>
@@ -126,33 +149,33 @@ export default function LandingPage() {
           </FadeInUp>
           
           <FadeInUp delay={0.2}>
-            <p className="text-xl sm:text-2xl md:text-3xl text-gray-900 font-bold mb-4 leading-relaxed max-w-4xl mx-auto px-4">
+            <p className="text-xl text-gray-900 font-bold mb-3 leading-relaxed px-2 max-w-4xl mx-auto">
               世界で通用する深い議論力を身につける
             </p>
-            <p className="text-base sm:text-lg md:text-xl text-indigo-600 font-semibold mb-8 max-w-3xl mx-auto px-4">
+            <p className="text-base text-indigo-600 font-semibold mb-6 px-2 max-w-3xl mx-auto">
               Business English for Professionals
             </p>
           </FadeInUp>
 
           <FadeInUp delay={0.3}>
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-8">
+            <div className="flex flex-col items-center justify-center gap-3 mb-6">
               <Link href={user ? "/dashboard" : "/signup"}>
                 <motion.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
-                  className="group px-8 py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-lg rounded-full shadow-lg shadow-indigo-500/30 flex items-center space-x-2"
+                  className="group px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-base rounded-full shadow-lg shadow-indigo-500/30 flex items-center space-x-2"
                 >
                   <span>無料体験を始める</span>
-                  <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                  <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                 </motion.button>
               </Link>
               <Link href="/login">
-                <button className="px-8 py-4 bg-white hover:bg-gray-50 text-gray-700 font-bold text-lg rounded-full border-2 border-gray-200 transition-colors">
+                <button className="px-6 py-3 bg-white hover:bg-gray-50 text-gray-700 font-bold text-base rounded-full border-2 border-gray-200 transition-colors">
                   ログイン
                 </button>
               </Link>
             </div>
-            <p className="text-sm text-gray-500">
+            <p className="text-xs text-gray-500">
               ✓ クレジットカード登録不要 ✓ 7日間フル機能をお試し ✓ 体験終了後も自動課金なし
             </p>
           </FadeInUp>
@@ -165,7 +188,7 @@ export default function LandingPage() {
           <FadeInUp>
             <div className="text-center mb-12">
               <div className="inline-block px-4 py-2 bg-indigo-100 text-indigo-700 rounded-full text-sm font-bold mb-4">
-                ターゲット & 悩み
+                悩み
               </div>
             <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 mb-4">
               こんなお悩みありませんか？
@@ -202,7 +225,7 @@ export default function LandingPage() {
                 深いコミュニケーション力を<br />
                 身につける3つのステップ
               </h2>
-              <p className="text-sm sm:text-base md:text-lg text-gray-600 mt-4 max-w-3xl mx-auto">
+              <p className="text-xs sm:text-base md:text-lg text-gray-600 mt-4 mx-auto">
                 読む（教養を深める）→ 話す（豊かな人間性を発信）→ 振り返る（深いコミュニケーション力を磨く）
               </p>
             </div>
@@ -249,7 +272,7 @@ export default function LandingPage() {
                 <div className="text-4xl font-bold text-pink-600 mb-4">03</div>
                 <h3 className="text-2xl font-bold text-gray-900 mb-4">
                   振り返る<br />
-                  <span className="text-lg text-gray-600 font-normal">（深いコミュニケーション力を磨く）</span>
+                  <span className="text-sm text-gray-600 font-normal">（深いコミュニケーション力を磨く）</span>
                 </h3>
                 <p className="text-gray-600 leading-relaxed">
                   AIからの詳細なフィードバックで、自分の表現を改善し続けます。一時的な会話ではなく、継続的な成長で真のコミュニケーション力を獲得します。
@@ -289,7 +312,7 @@ export default function LandingPage() {
                 </div>
                 <h3 className="text-xl font-bold text-gray-900 mb-4">議論力</h3>
                 <p className="text-gray-600 leading-relaxed">
-                  単なる会話ではなく、異なる意見を交わし、深い議論を展開する力を身につけます。ビジネスの場で求められる議論力を養います。
+                  単なる会話ではなく、異なる意見を交わし、深い議論を展開する力を身につけます。<br />ビジネスの場で求められる議論力を養います。
                 </p>
               </div>
             </FadeInUp>
@@ -301,7 +324,7 @@ export default function LandingPage() {
                 </div>
                 <h3 className="text-xl font-bold text-gray-900 mb-4">論理構成</h3>
                 <p className="text-gray-600 leading-relaxed">
-                  自分の意見を論理的に構成し、相手に分かりやすく伝える力を養います。ビジネスシーンで必須の論理的思考力を英語で表現します。
+                  自分の意見を論理的に構成し、相手に分かりやすく伝える力を養います。<br />ビジネスシーンで必須の論理的思考力を英語で表現します。
                 </p>
               </div>
             </FadeInUp>
@@ -313,7 +336,7 @@ export default function LandingPage() {
                 </div>
                 <h3 className="text-xl font-bold text-gray-900 mb-4">豊かな人間性の表現力</h3>
                 <p className="text-gray-600 leading-relaxed">
-                  あなたの価値観や考えを英語で表現し、真のあなたを知ってもらう力を身につけます。表面的な会話を超えた深いコミュニケーションを実現します。
+                  あなたの価値観や考えを英語で表現し、真のあなたを知ってもらう力を身につけます。<br />表面的な会話を超えた深いコミュニケーションを実現します。
                 </p>
               </div>
             </FadeInUp>
@@ -347,7 +370,7 @@ export default function LandingPage() {
                 </div>
                 <h3 className="text-lg font-bold text-gray-900 mb-3">レッスン生成</h3>
                 <p className="text-sm text-gray-600">
-                  世界の最新ニュースから、AIが自動的に英語レッスンを生成
+                  世界の最新ニュースから、<br />AIが自動的に英語レッスンを生成
                 </p>
               </div>
             </FadeInUp>
@@ -363,7 +386,7 @@ export default function LandingPage() {
                 </div>
                 <h3 className="text-lg font-bold text-gray-900 mb-3">要約理解</h3>
                 <p className="text-sm text-gray-600">
-                  記事の内容を深く理解し、重要なポイントを把握して教養を深める
+                  記事の内容を深く理解し、<br />重要なポイントを把握して教養を深める
                 </p>
               </div>
             </FadeInUp>
@@ -379,7 +402,7 @@ export default function LandingPage() {
                 </div>
                 <h3 className="text-lg font-bold text-gray-900 mb-3">立場表明</h3>
                 <p className="text-sm text-gray-600">
-                  あなたの意見や考えを英語で明確に表現し、論理的に伝える
+                  意見や考えを英語で明確に表現し、<br />論理的に伝える
                 </p>
               </div>
             </FadeInUp>
@@ -417,15 +440,15 @@ export default function LandingPage() {
       <section className="py-16 px-6 bg-white">
         <div className="max-w-6xl mx-auto">
           <FadeInUp>
-            <div className="text-center mb-12">
+            <div className="mb-12">
               <div className="inline-block px-4 py-2 bg-green-100 text-green-700 rounded-full text-sm font-bold mb-4">
                 学習習慣の形成
               </div>
               <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 mb-4">
                 1日10〜15分、英語で深く考えて議論することであなたの力を伸ばします
               </h2>
-              <p className="text-sm sm:text-base md:text-lg text-gray-600 mt-4 max-w-3xl mx-auto">
-                初めは大変かもしれませんが、毎日の継続があなたの力になります。フィードバックがあるのでいつでも見直しができ、着実な成長を実感できます。
+              <p className="text-sm sm:text-base md:text-lg text-gray-600 mt-4 max-w-3xl mx-auto text-left">
+                初めは大変かもしれませんが、毎日の継続があなたの力になります。<br />フィードバックがあるのでいつでも見直しができ、着実な成長を実感できます。
               </p>
             </div>
           </FadeInUp>
@@ -496,19 +519,18 @@ export default function LandingPage() {
                 <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-full flex items-center justify-center mb-6">
                   <Briefcase className="w-8 h-8 sm:w-10 sm:h-10 text-white" />
                 </div>
-                <div className="text-center max-w-3xl mx-auto">
-                  <h3 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900 mb-4 sm:mb-6">
+                <div className="max-w-3xl mx-auto">
+                  <h3 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900 mb-4 sm:mb-6 text-center">
                     表面的な会話を超えて、真の自分を伝えられた瞬間
                   </h3>
-                  <p className="text-sm sm:text-base text-gray-700 leading-relaxed mb-4 text-center">
-                    開発者自身の原体験として、長年英語を学んできた<br />ものの、<br />ビジネスの場面で表面的な会話に終始してしまうことに悩んでいました。
+                  <p className="text-sm sm:text-base text-gray-700 leading-relaxed mb-4 text-left">
+                    開発者自身の原体験として、長年英語を学んできたものの、ビジネスの場面で表面的な会話に終始してしまうことに悩んでいました。
                   </p>
-                  <p className="text-sm sm:text-base text-gray-700 leading-relaxed mb-4 text-center">
-                    しかし、世界のニュースを題材に深い議論を<br />重ねることで、<br />自分の考えや価値観を英語で表現できるようになりました。
+                  <p className="text-sm sm:text-base text-gray-700 leading-relaxed mb-4 text-left">
+                    しかし、世界のニュースを題材に深い議論を重ねることで、自分の考えや価値観を英語で表現できるようになりました。
                   </p>
-                  <p className="text-sm sm:text-base text-gray-700 leading-relaxed text-center">
-                    <span className="font-semibold text-indigo-600">その瞬間、真の自分を伝えられ、信頼関係が生まれ、ビジネスが好転した。</span>
-                    この体験を多くのビジネスマンに届けたいという想いから、このアプリを開発しました。
+                  <p className="text-sm sm:text-base text-gray-700 leading-relaxed text-left">
+                    <span className="font-semibold text-indigo-600">その瞬間、真の自分を伝えられ、信頼関係が生まれ、ビジネスが好転した。</span><br />この体験を多くのビジネスマンに届けたいという想いから、このアプリを開発しました。
                   </p>
                 </div>
               </div>
