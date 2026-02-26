@@ -141,7 +141,7 @@ export default function LandingPage() {
           </FadeInUp>
           
           <FadeInUp delay={0.1}>
-            <h1 className="text-4xl font-black text-gray-900 mb-3 leading-tight px-2 max-w-5xl mx-auto">
+            <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-black text-gray-900 mb-3 leading-tight px-2 max-w-5xl mx-auto">
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600">
                 DeepSpeak
               </span>
