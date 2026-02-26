@@ -6,6 +6,7 @@ import { API_URL } from '../../lib/api';
 
 interface User {
     email: string;
+    name?: string;
 }
 
 interface AuthContextType {
