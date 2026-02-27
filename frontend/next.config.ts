@@ -1,6 +1,14 @@
 import type { NextConfig } from "next";
+import withPWA from "next-pwa";
 
 const nextConfig: NextConfig = {
+  turbopack: {},
+  allowedDevOrigins: [
+    "localhost",
+    "127.0.0.1",
+    "192.168.0.181",
+    "100.64.1.103",
+  ],
   env: {
     NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL,
   },
@@ -17,4 +25,12 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+const pwaConfig = withPWA({
+  dest: 'public',
+  disable: process.env.NODE_ENV === 'development',
+  register: true,
+  skipWaiting: true,
+});
+
+const config = pwaConfig(nextConfig);
+export default { ...config, allowedDevOrigins: nextConfig.allowedDevOrigins };
