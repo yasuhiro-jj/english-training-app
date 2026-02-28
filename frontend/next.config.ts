@@ -8,6 +8,7 @@ const nextConfig: NextConfig = {
     "127.0.0.1",
     "192.168.0.181",
     "100.64.1.103",
+    "192.168.150.66",
   ],
   env: {
     NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL,
@@ -27,7 +28,7 @@ const nextConfig: NextConfig = {
 
 const pwaConfig = withPWA({
   dest: 'public',
-  disable: process.env.NODE_ENV === 'development',
+  disable: process.env.NODE_ENV === 'development', // 開発環境ではPWAを無効化
   register: true,
   skipWaiting: true,
 });
