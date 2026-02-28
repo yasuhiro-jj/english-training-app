@@ -2,7 +2,9 @@ import type { NextConfig } from "next";
 import withPWA from "next-pwa";
 
 const nextConfig: NextConfig = {
-  turbopack: {},
+  turbopack: {
+    root: process.cwd(),
+  },
   allowedDevOrigins: [
     "localhost",
     "127.0.0.1",
