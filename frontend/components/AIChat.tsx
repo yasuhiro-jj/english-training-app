@@ -542,7 +542,7 @@ export default function AIChat() {
                         <div
                             className={`max-w-[85%] p-4 rounded-2xl text-sm leading-relaxed shadow-lg group relative ${m.role === 'user'
                                 ? 'bg-indigo-600 text-white rounded-tr-none'
-                                : 'bg-white/10 text-slate-200 border border-white/10 rounded-tl-none'
+                                : 'bg-white/90 text-black border border-gray-200 rounded-tl-none'
                                 }`}
                         >
                             {m.content}
