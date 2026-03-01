@@ -398,16 +398,33 @@ export default function AIChat() {
                     const transcript = result.transcript.trim();
                     if (transcript) {
                         console.log('[AIChat] Transcript:', transcript);
-                        // setInput(transcript); // 送信するので入力欄には設定しない（または送信後にクリアされる）
                         
-                        // 文字起こし完了後、すぐにトランスクライブ状態を解除（AI思考中状態へ移行）
+                        // 文字起こし完了後、すぐにトランスクライブ状態を解除
                         setIsTranscribing(false);
                         
-                        // 自動的に送信（awaitしないことでUIをブロックしない）
-                        handleSend(transcript).catch(err => {
-                            console.error('[AIChat] Error in handleSend:', err);
-                            setMessages(prev => [...prev, { role: 'assistant', content: '申し訳ありません。エラーが発生しました。' }]);
+                        // 文字起こし結果を即座にユーザーメッセージとして表示（ユーザーが確認できるように）
+                        // setMessagesは非同期で実行されるため、即座にUIに反映される
+                        setMessages(prev => {
+                            // 重複チェック（念のため）
+                            const lastMessage = prev[prev.length - 1];
+                            if (lastMessage && lastMessage.role === 'user' && lastMessage.content === transcript) {
+                                return prev; // 既に同じメッセージが存在する場合は追加しない
+                            }
+                            return [...prev, { role: 'user', content: transcript }];
                         });
+                        
+                        // ステータスメッセージを更新
+                        setStatusMsg('AI is thinking...');
+                        
+                        // メッセージが確実に追加された後にAIに送信
+                        // 少し待ってから送信することで、UIの更新を確実にする
+                        setTimeout(() => {
+                            handleSend(transcript).catch(err => {
+                                console.error('[AIChat] Error in handleSend:', err);
+                                setMessages(prev => [...prev, { role: 'assistant', content: '申し訳ありません。エラーが発生しました。' }]);
+                                setStatusMsg('');
+                            });
+                        }, 50); // 50ms待機してから送信
                     } else {
                         console.warn('[AIChat] No transcript received');
                         setStatusMsg('No speech detected');
@@ -469,15 +486,20 @@ export default function AIChat() {
         // 入力欄をクリア（手動入力でも音声入力でも）
         setInput('');
 
-        setMessages(prev => [...prev, { role: 'user', content: userMsg }]);
+        // 手動入力の場合のみユーザーメッセージを追加（音声入力の場合は既に追加済み）
+        if (!manualInput) {
+            setMessages(prev => [...prev, { role: 'user', content: userMsg }]);
+        }
+        
         setIsTyping(true);
-        setStatusMsg('');
+        setStatusMsg('AI is thinking...');
 
         try {
             // Use REF for history to avoid stale closure
             const history = messagesRef.current.map(m => ({ role: m.role, content: m.content }));
             const data = await api.sendMessage(userMsg, history);
             setMessages(prev => [...prev, { role: 'assistant', content: data.response }]);
+            setStatusMsg(''); // ステータスメッセージをクリア
 
             // Ensure TTS playback if voice mode is on (Checking both state and ref for safety)
             if (isVoiceMode || isVoiceModeRef.current) {
@@ -487,6 +509,7 @@ export default function AIChat() {
         } catch (error) {
             console.error('Chat error:', error);
             setMessages(prev => [...prev, { role: 'assistant', content: '申し訳ありません。エラーが発生しました。' }]);
+            setStatusMsg('');
         } finally {
             setIsTyping(false);
         }
