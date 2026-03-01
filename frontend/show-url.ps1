@@ -18,7 +18,7 @@ Write-Host "========================================" -ForegroundColor Cyan
 Write-Host "  Open this URL on your smartphone:" -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 if ($ip) {
-  $url = "http://${ip}:3000"
+  $url = "http://${ip}:3001"
   Write-Host ""
   Write-Host "  $url" -ForegroundColor Green
   Write-Host ""
@@ -32,7 +32,7 @@ if ($ip) {
   Write-Host "  Your PC's IPv4 addresses:" -ForegroundColor Yellow
   $all | ForEach-Object { Write-Host "    $($_.IPAddress)  ($($_.InterfaceAlias))" -ForegroundColor Gray }
   Write-Host ""
-  Write-Host "  If you see an address above, try: http://THAT_IP:3000" -ForegroundColor Yellow
+  Write-Host "  If you see an address above, try: http://THAT_IP:3001" -ForegroundColor Yellow
   Write-Host "  Or run: ipconfig" -ForegroundColor Gray
   Write-Host ""
 }
