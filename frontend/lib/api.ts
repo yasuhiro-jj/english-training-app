@@ -242,7 +242,8 @@ export const api = {
         });
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
-            const errorMessage = errorData.detail || '文字起こしに失敗しました';
+            console.error('[API] Whisper API error:', errorData);
+            const errorMessage = errorData.detail || errorData.message || `文字起こしに失敗しました (${response.status})`;
             throw new Error(errorMessage);
         }
         return response.json();

@@ -86,7 +86,7 @@ class WhisperTranscribeRequest(BaseModel):
     """Whisper文字起こしリクエスト"""
     audio_data: str  # base64エンコードされた音声データ
     session_id: str
-    duration_seconds: int
+    duration_seconds: float  # 録音時間（秒）
 
 
 class WhisperTranscribeResponse(BaseModel):
