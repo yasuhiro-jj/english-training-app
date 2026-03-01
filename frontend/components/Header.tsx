@@ -120,28 +120,28 @@ export default function Header() {
                         <Link
                             href="/lessons"
                             onClick={() => setIsMenuOpen(false)}
-                            className={`px-4 py-3 text-sm font-bold transition-colors border-b border-white/10 ${pathname === '/lessons' ? 'text-indigo-400 bg-white/5' : 'text-slate-300 hover:text-white hover:bg-white/5'}`}
+                            className={`px-4 py-3 text-sm font-bold transition-colors border-b border-white/10 ${pathname === '/lessons' ? 'text-indigo-400 bg-white/5' : 'text-indigo-300 hover:text-indigo-400 hover:bg-white/5'}`}
                         >
                             過去の記事
                         </Link>
                         <Link
                             href="/dashboard"
                             onClick={() => setIsMenuOpen(false)}
-                            className={`px-4 py-3 text-sm font-bold transition-colors border-b border-white/10 ${pathname === '/dashboard' ? 'text-indigo-400 bg-white/5' : 'text-slate-300 hover:text-white hover:bg-white/5'}`}
+                            className={`px-4 py-3 text-sm font-bold transition-colors border-b border-white/10 ${pathname === '/dashboard' ? 'text-indigo-400 bg-white/5' : 'text-indigo-300 hover:text-indigo-400 hover:bg-white/5'}`}
                         >
                             Dashboard
                         </Link>
                         <Link
                             href="/plans"
                             onClick={() => setIsMenuOpen(false)}
-                            className={`px-4 py-3 text-sm font-bold transition-colors border-b border-white/10 ${pathname === '/plans' ? 'text-indigo-400 bg-white/5' : 'text-slate-300 hover:text-white hover:bg-white/5'}`}
+                            className={`px-4 py-3 text-sm font-bold transition-colors border-b border-white/10 ${pathname === '/plans' ? 'text-indigo-400 bg-white/5' : 'text-indigo-300 hover:text-indigo-400 hover:bg-white/5'}`}
                         >
                             プラン
                         </Link>
                         <Link
                             href="/chat"
                             onClick={() => setIsMenuOpen(false)}
-                            className={`px-4 py-3 text-sm font-bold transition-colors flex items-center space-x-2 ${pathname === '/chat' ? 'text-emerald-400 bg-white/5' : 'text-slate-300 hover:text-white hover:bg-white/5'}`}
+                            className={`px-4 py-3 text-sm font-bold transition-colors flex items-center space-x-2 ${pathname === '/chat' ? 'text-emerald-400 bg-white/5' : 'text-indigo-300 hover:text-indigo-400 hover:bg-white/5'}`}
                         >
                             <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span>
                             <span>AI Coaching (Chat)</span>
