@@ -454,55 +454,29 @@ class NotionService:
                     print(f"[Backend] [NotionService] Appending JSON to page: {response['id']}")
                     print(f"[Backend] [NotionService] JSON length: {len(lesson_json)} characters")
                     
-                    # JSONデータが2000文字を超える場合は、複数のブロックに分割
+                    # JSONデータが2000文字を超える場合は、データを欠落させずに
+                    # 複数のcodeブロックに分割して保存する（読み込み側で連結して復元する）
                     max_chunk_size = 1900  # 安全マージンを考慮
-                    if len(lesson_json) <= max_chunk_size:
-                        # 短い場合はそのまま保存
-                        self.client.blocks.children.append(
-                            block_id=response["id"],
-                            children=[
-                                {
-                                    "object": "block",
-                                    "type": "code",
-                                    "code": {
-                                        "rich_text": [{"type": "text", "text": {"content": lesson_json}}],
-                                        "language": "json"
-                                    }
+                    chunks = [
+                        lesson_json[i:i + max_chunk_size]
+                        for i in range(0, len(lesson_json), max_chunk_size)
+                    ] or [""]
+                    self.client.blocks.children.append(
+                        block_id=response["id"],
+                        children=[
+                            {
+                                "object": "block",
+                                "type": "code",
+                                "code": {
+                                    "rich_text": [{"type": "text", "text": {"content": chunk}}],
+                                    "language": "json"
                                 }
-                            ]
-                        )
-                        logger.info("JSON appended successfully")
-                        print(f"[Backend] [NotionService] ✅ JSON appended successfully ({len(lesson_json)} chars)")
-                    else:
-                        # 長い場合は最初の部分のみ保存し、残りは省略
-                        truncated_json = lesson_json[:max_chunk_size] + "\n... (truncated, full data available in properties)"
-                        self.client.blocks.children.append(
-                            block_id=response["id"],
-                            children=[
-                                {
-                                    "object": "block",
-                                    "type": "code",
-                                    "code": {
-                                        "rich_text": [{"type": "text", "text": {"content": truncated_json}}],
-                                        "language": "json"
-                                    }
-                                },
-                                {
-                                    "object": "block",
-                                    "type": "paragraph",
-                                    "paragraph": {
-                                        "rich_text": [{
-                                            "type": "text",
-                                            "text": {
-                                                "content": f"Note: Full JSON data ({len(lesson_json)} characters) is too long to display. Data is available in page properties."
-                                            }
-                                        }]
-                                    }
-                                }
-                            ]
-                        )
-                        logger.info(f"JSON appended (truncated): {len(lesson_json)} chars -> {len(truncated_json)} chars")
-                        print(f"[Backend] [NotionService] ⚠️ JSON appended (truncated): {len(lesson_json)} chars -> {len(truncated_json)} chars")
+                            }
+                            for chunk in chunks
+                        ]
+                    )
+                    logger.info(f"JSON appended successfully in {len(chunks)} block(s), {len(lesson_json)} chars total")
+                    print(f"[Backend] [NotionService] ✅ JSON appended successfully in {len(chunks)} block(s) ({len(lesson_json)} chars total)")
                 except Exception as e:
                     logger.warning(f"Could not append JSON to page (non-critical): {e}")
                     print(f"[Backend] [NotionService] ⚠️ Warning: Could not append JSON to page: {e}")
@@ -565,17 +539,21 @@ class NotionService:
                     created_at = page.get("created_time", "") or ""
 
                 # ページのブロックからJSONデータを取得を試みる（あればそれを優先）
+                # save_lesson側は長いJSONを複数のcodeブロックに分割して保存するため、
+                # ここでも全てのJSON codeブロックのcontentを連結してからパースする
                 lesson_data = None
                 try:
                     blocks = self.client.blocks.children.list(block_id=page["id"])
+                    json_parts = []
                     for block in blocks.get("results", []):
                         if block.get("type") == "code" and block.get("code", {}).get("language") == "json":
                             rich = block.get("code", {}).get("rich_text") or []
                             if rich and rich[0].get("text", {}).get("content"):
-                                import json
+                                json_parts.append(rich[0]["text"]["content"])
+                    if json_parts:
+                        import json
 
-                                lesson_data = json.loads(rich[0]["text"]["content"])
-                            break
+                        lesson_data = json.loads("".join(json_parts))
                 except Exception:
                     lesson_data = None
 

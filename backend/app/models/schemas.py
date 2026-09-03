@@ -66,11 +66,13 @@ class LessonOption(BaseModel):
     title: str
     date: str
     category: str
-    vocabulary: list[VocabularyItem]
+    # Notion側のJSON復元に失敗した場合のフォールバックデータには含まれないため、
+    # 一覧表示自体は継続できるようデフォルト値を設定しておく
+    vocabulary: list[VocabularyItem] = []
     content: str
-    discussion_a: list[str]
-    discussion_b: list[str]
-    question: str # Main question for session start compatibility
+    discussion_a: list[str] = []
+    discussion_b: list[str] = []
+    question: str = "" # Main question for session start compatibility
     level: str
     japanese_title: str = ""  # Optional, added by backend after generation
 
