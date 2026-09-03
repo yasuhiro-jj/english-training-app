@@ -229,3 +229,270 @@ class UsageService:
                 "remaining_minutes": None,
                 "should_fallback_to_stt": False
             }
+    
+    async def get_daily_lesson_count(self, email: str) -> int:
+        """今日のレッスン使用数を取得"""
+        try:
+            response = self.client.databases.query(
+                database_id=self.user_db_id,
+                filter={
+                    "property": "Email",
+                    "rich_text": {
+                        "equals": email
+                    }
+                }
+            )
+            
+            if not response.get("results"):
+                return 0
+            
+            user = response["results"][0]
+            props = user["properties"]
+            
+            # 最後にレッスンを使った日を取得
+            last_lesson_date = props.get("Last Lesson Date", {}).get("date", {})
+            if not last_lesson_date or not last_lesson_date.get("start"):
+                return 0
+            
+            # 今日の日付と比較
+            last_date = datetime.fromisoformat(last_lesson_date["start"].replace("Z", "+00:00"))
+            today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+            
+            # 今日でない場合は0を返す
+            if last_date.date() != today.date():
+                return 0
+            
+            # 今日のレッスン数を取得
+            daily_count = props.get("Daily Lessons Count", {}).get("number")
+            return int(daily_count) if daily_count is not None else 0
+        except Exception as e:
+            logger.error(f"Error getting daily lesson count: {e}")
+            return 0
+    
+    async def can_use_lesson(self, email: str) -> Dict:
+        """
+        レッスン使用可能かチェック（無料体験: 1日1レッスン）
+        
+        Returns:
+            {
+                "allowed": bool,
+                "reason": str,
+                "remaining_lessons": int
+            }
+        """
+        subscription = await self.get_user_subscription_status(email)
+        
+        # 有料プランは無制限
+        if not subscription["is_trial"]:
+            return {
+                "allowed": True,
+                "reason": "",
+                "remaining_lessons": None
+            }
+        
+        # 無料体験: 1日1レッスン
+        daily_count = await self.get_daily_lesson_count(email)
+        
+        if daily_count >= 1:
+            return {
+                "allowed": False,
+                "reason": "無料体験では1日1レッスンまでです。明日またお試しください。",
+                "remaining_lessons": 0
+            }
+        
+        return {
+            "allowed": True,
+            "reason": "",
+            "remaining_lessons": 1 - daily_count
+        }
+    
+    async def add_lesson_usage(self, email: str):
+        """レッスン使用を記録"""
+        try:
+            response = self.client.databases.query(
+                database_id=self.user_db_id,
+                filter={
+                    "property": "Email",
+                    "rich_text": {
+                        "equals": email
+                    }
+                }
+            )
+            
+            if not response.get("results"):
+                logger.warning(f"User not found: {email}")
+                return
+            
+            user_id = response["results"][0]["id"]
+            props = response["results"][0]["properties"]
+            
+            # 最後にレッスンを使った日を取得
+            last_lesson_date = props.get("Last Lesson Date", {}).get("date", {})
+            today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+            
+            # 今日の日付かチェック
+            if last_lesson_date and last_lesson_date.get("start"):
+                last_date = datetime.fromisoformat(last_lesson_date["start"].replace("Z", "+00:00"))
+                if last_date.date() == today.date():
+                    # 今日の場合はカウントを増やす
+                    current_count = props.get("Daily Lessons Count", {}).get("number", 0) or 0
+                    new_count = current_count + 1
+                else:
+                    # 今日でない場合は1にリセット
+                    new_count = 1
+            else:
+                # 初回使用
+                new_count = 1
+            
+            update_props = {
+                "Daily Lessons Count": {"number": new_count},
+                "Last Lesson Date": {"date": {"start": today.isoformat()}}
+            }
+            
+            self.client.pages.update(
+                page_id=user_id,
+                properties=update_props
+            )
+            
+            logger.info(f"Updated lesson usage for {email}: {new_count} lessons today")
+        except Exception as e:
+            logger.error(f"Error adding lesson usage: {e}")
+            # エラーでも続行（使用量記録は重要だが、レッスン生成は続行可能）
+    
+    async def get_daily_ai_messages_count(self, email: str) -> int:
+        """今日のAIコーチングメッセージ使用数を取得"""
+        try:
+            response = self.client.databases.query(
+                database_id=self.user_db_id,
+                filter={
+                    "property": "Email",
+                    "rich_text": {
+                        "equals": email
+                    }
+                }
+            )
+            
+            if not response.get("results"):
+                return 0
+            
+            user = response["results"][0]
+            props = user["properties"]
+            
+            # 最後にAIコーチングを使った日を取得
+            last_ai_date = props.get("Last AI Message Date", {}).get("date", {})
+            if not last_ai_date or not last_ai_date.get("start"):
+                return 0
+            
+            # 今日の日付と比較
+            last_date = datetime.fromisoformat(last_ai_date["start"].replace("Z", "+00:00"))
+            today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+            
+            # 今日でない場合は0を返す
+            if last_date.date() != today.date():
+                return 0
+            
+            # 今日のメッセージ数を取得
+            daily_count = props.get("Daily AI Messages Count", {}).get("number")
+            return int(daily_count) if daily_count is not None else 0
+        except Exception as e:
+            logger.error(f"Error getting daily AI messages count: {e}")
+            return 0
+    
+    async def can_use_ai_chat(self, email: str) -> Dict:
+        """
+        AIコーチング使用可能かチェック（無料体験: 10メッセージ/日）
+        
+        Returns:
+            {
+                "allowed": bool,
+                "reason": str,
+                "remaining_messages": int
+            }
+        """
+        subscription = await self.get_user_subscription_status(email)
+        
+        # 有料プランは無制限（Premium）または月間制限（Basic）
+        if not subscription["is_trial"]:
+            plan = subscription.get("plan", "free")
+            if plan == "premium":
+                return {
+                    "allowed": True,
+                    "reason": "",
+                    "remaining_messages": None
+                }
+            # Basicプランは100メッセージ/月（実装は後で追加可能）
+            return {
+                "allowed": True,
+                "reason": "",
+                "remaining_messages": None
+            }
+        
+        # 無料体験: 10メッセージ/日
+        daily_count = await self.get_daily_ai_messages_count(email)
+        
+        if daily_count >= 10:
+            return {
+                "allowed": False,
+                "reason": "無料体験では1日10メッセージまでです。明日またお試しください。",
+                "remaining_messages": 0
+            }
+        
+        remaining = 10 - daily_count
+        return {
+            "allowed": True,
+            "reason": "",
+            "remaining_messages": remaining
+        }
+    
+    async def add_ai_chat_usage(self, email: str):
+        """AIコーチングメッセージ使用を記録"""
+        try:
+            response = self.client.databases.query(
+                database_id=self.user_db_id,
+                filter={
+                    "property": "Email",
+                    "rich_text": {
+                        "equals": email
+                    }
+                }
+            )
+            
+            if not response.get("results"):
+                logger.warning(f"User not found: {email}")
+                return
+            
+            user_id = response["results"][0]["id"]
+            props = response["results"][0]["properties"]
+            
+            # 最後にAIコーチングを使った日を取得
+            last_ai_date = props.get("Last AI Message Date", {}).get("date", {})
+            today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+            
+            # 今日の日付かチェック
+            if last_ai_date and last_ai_date.get("start"):
+                last_date = datetime.fromisoformat(last_ai_date["start"].replace("Z", "+00:00"))
+                if last_date.date() == today.date():
+                    # 今日の場合はカウントを増やす
+                    current_count = props.get("Daily AI Messages Count", {}).get("number", 0) or 0
+                    new_count = current_count + 1
+                else:
+                    # 今日でない場合は1にリセット
+                    new_count = 1
+            else:
+                # 初回使用
+                new_count = 1
+            
+            update_props = {
+                "Daily AI Messages Count": {"number": new_count},
+                "Last AI Message Date": {"date": {"start": today.isoformat()}}
+            }
+            
+            self.client.pages.update(
+                page_id=user_id,
+                properties=update_props
+            )
+            
+            logger.info(f"Updated AI chat usage for {email}: {new_count} messages today")
+        except Exception as e:
+            logger.error(f"Error adding AI chat usage: {e}")
+            # エラーでも続行（使用量記録は重要だが、チャットは続行可能）

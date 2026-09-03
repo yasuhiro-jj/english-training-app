@@ -25,11 +25,24 @@ async def get_dashboard_stats(user: dict = Depends(get_current_user)):
             "plan": subscription.get("plan", "free")
         }
         
+        # 1日の使用量を取得（無料体験の場合）
+        usage_info = {}
+        if subscription.get("is_trial"):
+            daily_lessons = await usage_service.get_daily_lesson_count(email)
+            daily_ai_messages = await usage_service.get_daily_ai_messages_count(email)
+            usage_info = {
+                "daily_lessons": daily_lessons,
+                "daily_ai_messages": daily_ai_messages,
+                "remaining_lessons": max(0, 1 - daily_lessons),
+                "remaining_ai_messages": max(0, 10 - daily_ai_messages)
+            }
+        
         return {
             "summary": stats,
             "mistake_trends": mistakes,
             "recent_feedback": recent_feedback,
-            "subscription": trial_info
+            "subscription": trial_info,
+            "usage": usage_info
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

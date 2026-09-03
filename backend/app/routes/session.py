@@ -2,6 +2,7 @@ import asyncio
 from fastapi import APIRouter, HTTPException, Depends
 from app.models.schemas import SessionCreate, SessionResponse, TranscriptSubmit, AnalysisResponse, LessonGenerateResponse
 from app.services import AIService, ArticleService, NotionService, NewsService
+from app.services.usage_service import UsageService
 from app.deps import get_current_user
 import uuid
 from datetime import datetime
@@ -13,6 +14,7 @@ ai_service = AIService()
 article_service = ArticleService()
 notion_service = NotionService()
 news_service = NewsService()
+usage_service = UsageService()
 
 # セッション管理用の簡易ストレージ（本番環境ではRedisなどを使用）
 sessions = {}
@@ -23,11 +25,23 @@ async def generate_lessons(user: dict = Depends(get_current_user), level: int = 
     """
     毎日新聞のトップ記事から英語レッスンを生成
     生成したレッスンは自動的にNotionに保存されます
+    無料体験プランでは1日1レッスンまで
     """
     import logging
     logger = logging.getLogger(__name__)
     
     print("[Backend] generate_lessons called")
+    
+    # 使用制限チェック
+    user_email = user.get("email", "") if user else ""
+    if user_email:
+        check_result = await usage_service.can_use_lesson(user_email)
+        if not check_result["allowed"]:
+            raise HTTPException(
+                status_code=403,
+                detail=check_result["reason"]
+            )
+    
     try:
         # 1. ニュース取得
         print("[Backend] Fetching news...")
@@ -54,8 +68,12 @@ async def generate_lessons(user: dict = Depends(get_current_user), level: int = 
             
         print(f"[Backend] SUCCESS: Lessons generated: {len(lessons)} items")
 
-        # 3. Notion保存はバックグラウンドで実行（レスポンスを先行返却して体感時間を短縮）
+        # 3. 使用量を記録（無料体験の場合）
         user_email = user.get("email", "") if user else ""
+        if user_email:
+            await usage_service.add_lesson_usage(user_email)
+
+        # 4. Notion保存はバックグラウンドで実行（レスポンスを先行返却して体感時間を短縮）
         lessons_copy = [
             lesson if isinstance(lesson, dict) else (
                 lesson.model_dump() if hasattr(lesson, "model_dump") else (

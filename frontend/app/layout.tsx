@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "./lib/auth-context";
 import Header from "../components/Header";
+import UsageLimitBanner from "../components/UsageLimitBanner";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -50,6 +51,7 @@ export default function RootLayout({
       >
         <AuthProvider>
           <Header />
+          <UsageLimitBanner />
           {children}
         </AuthProvider>
       </body>
