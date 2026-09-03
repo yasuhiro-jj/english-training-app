@@ -516,12 +516,12 @@ export default function AIChat() {
     };
 
     return (
-        <div className="flex flex-col h-[550px] bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl overflow-hidden shadow-2xl transition-all hover:border-white/20">
+        <div className="flex flex-col h-[550px] bg-white border border-gray-200 rounded-3xl overflow-hidden shadow-2xl transition-all hover:border-gray-300">
             {/* Header */}
-            <div className="p-4 border-b border-white/10 bg-white/5 flex items-center justify-between">
+            <div className="p-4 border-b border-gray-200 bg-gray-50 flex items-center justify-between">
                 <div className="flex items-center space-x-3">
                     <div className={`w-2 h-2 rounded-full ${isTyping ? 'bg-indigo-500 animate-pulse' : 'bg-emerald-500'}`}></div>
-                    <span className="font-bold text-sm tracking-tight text-slate-100">AI Tutor Mode</span>
+                    <span className="font-bold text-sm tracking-tight text-gray-900">AI Tutor Mode</span>
                 </div>
                 <div className="flex items-center space-x-3">
                     <button
@@ -535,7 +535,7 @@ export default function AIChat() {
                                 setStatusMsg('Voice playback disabled');
                             }
                         }}
-                        className={`text-[10px] font-bold px-2 py-1 rounded-md transition-all ${isVoiceMode ? 'bg-indigo-600 text-white shadow-lg' : 'bg-white/10 text-slate-400'
+                        className={`text-[10px] font-bold px-2 py-1 rounded-md transition-all ${isVoiceMode ? 'bg-indigo-600 text-white shadow-lg' : 'bg-gray-200 text-gray-600'
                             }`}
                     >
                         {isVoiceMode ? '🔊 VOICE ON' : '🔈 VOICE OFF'}
@@ -546,12 +546,12 @@ export default function AIChat() {
             {/* Messages */}
             <div
                 ref={scrollRef}
-                className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-hide bg-slate-900/20"
+                className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-hide bg-gray-50"
             >
                 {messages.length === 0 && (
-                    <div className="h-full flex flex-col items-center justify-center text-center space-y-4 opacity-50 px-8">
+                    <div className="h-full flex flex-col items-center justify-center text-center space-y-4 opacity-60 px-8">
                         <div className="text-4xl animate-bounce">🎓</div>
-                        <p className="text-sm font-medium leading-relaxed">
+                        <p className="text-sm font-medium leading-relaxed text-gray-600">
                             Welcome! I'm your AI English Tutor.<br />
                             Let's have a conversation. You can type or use the microphone (Whisper API).
                         </p>
@@ -565,7 +565,7 @@ export default function AIChat() {
                         <div
                             className={`max-w-[85%] p-4 rounded-2xl text-sm leading-relaxed shadow-lg group relative ${m.role === 'user'
                                 ? 'bg-indigo-600 text-white rounded-tr-none'
-                                : 'bg-white/90 text-black border border-gray-200 rounded-tl-none'
+                                : 'bg-white text-gray-900 border border-gray-200 rounded-tl-none'
                                 }`}
                         >
                             {m.content}
@@ -575,9 +575,9 @@ export default function AIChat() {
                                         onClick={() => playAudioResponse(m.content)}
                                         disabled={isAudioLoading}
                                         className={`p-2 rounded-full transition-all shadow-md ${
-                                            isAudioLoading 
-                                            ? 'bg-gray-500/20 text-gray-400 cursor-wait' 
-                                            : 'bg-white/5 hover:bg-white/20 text-indigo-400'
+                                            isAudioLoading
+                                            ? 'bg-gray-200 text-gray-400 cursor-wait'
+                                            : 'bg-gray-100 hover:bg-gray-200 text-indigo-600'
                                         }`}
                                         title="Play audio"
                                     >
@@ -586,7 +586,7 @@ export default function AIChat() {
                                     {isPlaying && (
                                         <button
                                             onClick={stopAudio}
-                                            className="p-2 bg-red-500/20 hover:bg-red-500/40 rounded-full transition-all text-red-400 shadow-md"
+                                            className="p-2 bg-red-100 hover:bg-red-200 rounded-full transition-all text-red-600 shadow-md"
                                             title="Stop audio"
                                         >
                                             ⏹️
@@ -599,7 +599,7 @@ export default function AIChat() {
                 ))}
                 {isTyping && (
                     <div className="flex justify-start">
-                        <div className="bg-white/10 p-4 rounded-2xl rounded-tl-none border border-white/10">
+                        <div className="bg-white p-4 rounded-2xl rounded-tl-none border border-gray-200">
                             <div className="flex space-x-1.5 Items-center">
                                 <div className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-bounce"></div>
                                 <div className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-bounce [animation-delay:0.2s]"></div>
@@ -612,13 +612,13 @@ export default function AIChat() {
 
             {/* Status Indicator */}
             {statusMsg && (
-                <div className="px-4 py-1 text-[10px] bg-indigo-500/20 text-indigo-300 font-bold border-t border-white/5">
+                <div className="px-4 py-1 text-[10px] bg-indigo-50 text-indigo-700 font-bold border-t border-gray-200">
                     {statusMsg}
                 </div>
             )}
 
             {/* Input */}
-            <div className="p-4 bg-white/5 border-t border-white/10">
+            <div className="p-4 bg-gray-50 border-t border-gray-200">
                 <div className="flex items-center space-x-3">
                     <button
                         onClick={(e) => {
@@ -633,7 +633,7 @@ export default function AIChat() {
                                 ? 'bg-red-500 text-white animate-pulse shadow-red-500/20 cursor-pointer'
                                 : isTranscribing
                                 ? 'bg-yellow-500 text-white cursor-not-allowed'
-                                : 'bg-white/10 text-slate-400 hover:text-white hover:bg-white/20 cursor-pointer'
+                                : 'bg-gray-200 text-gray-500 hover:text-gray-900 hover:bg-gray-300 cursor-pointer'
                         }`}
                         title={isTranscribing ? 'Transcribing...' : isListening ? 'Stop Recording (Click to stop)' : 'Start Recording (Click to start)'}
                     >
@@ -656,7 +656,7 @@ export default function AIChat() {
                             onChange={(e) => setInput(e.target.value)}
                             onKeyPress={(e) => e.key === 'Enter' && handleSend()}
                             placeholder={isListening ? 'Recording...' : isTranscribing ? 'Transcribing...' : 'Type or speak English...'}
-                            className="w-full bg-white/10 border border-white/10 rounded-2xl px-5 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all placeholder-slate-500"
+                            className="w-full bg-white border border-gray-300 rounded-2xl px-5 py-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all placeholder-gray-400"
                         />
                     </div>
 

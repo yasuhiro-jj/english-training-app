@@ -16,13 +16,13 @@ export default function Header() {
 
     return (
         <header className="fixed top-0 left-0 right-0 z-50 px-3 sm:px-6 py-2 sm:py-4">
-            <div className="max-w-7xl mx-auto flex items-center justify-between bg-white/5 border border-white/10 backdrop-blur-xl rounded-xl sm:rounded-2xl px-3 sm:px-6 py-2 sm:py-2.5 shadow-xl">
+            <div className="max-w-7xl mx-auto flex items-center justify-between bg-white/90 border border-gray-200 backdrop-blur-xl rounded-xl sm:rounded-2xl px-3 sm:px-6 py-2 sm:py-2.5 shadow-xl">
                 <div className="flex items-center space-x-3 sm:space-x-8">
                     <Link href="/" className="flex items-center space-x-1.5 sm:space-x-2 group">
                         <div className="w-7 h-7 sm:w-8 sm:h-8 bg-indigo-600 rounded-lg flex items-center justify-center group-hover:bg-indigo-500 transition-colors">
                             <span className="text-white font-black text-[10px] sm:text-xs">DS</span>
                         </div>
-                        <span className="text-white font-bold tracking-tight text-xs sm:text-sm hidden sm:block">
+                        <span className="text-gray-900 font-bold tracking-tight text-xs sm:text-sm hidden sm:block">
                             DeepSpeak
                         </span>
                     </Link>
@@ -33,25 +33,25 @@ export default function Header() {
                             <nav className="hidden md:flex items-center space-x-4 lg:space-x-6">
                                 <Link
                                     href="/lessons"
-                                    className={`text-xs lg:text-sm font-bold transition-colors ${pathname === '/lessons' ? 'text-indigo-400' : 'text-slate-400 hover:text-white'}`}
+                                    className={`text-xs lg:text-sm font-bold transition-colors ${pathname === '/lessons' ? 'text-indigo-600' : 'text-gray-500 hover:text-gray-900'}`}
                                 >
                                     過去の記事
                                 </Link>
                                 <Link
                                     href="/dashboard"
-                                    className={`text-xs lg:text-sm font-bold transition-colors ${pathname === '/dashboard' ? 'text-indigo-400' : 'text-slate-400 hover:text-white'}`}
+                                    className={`text-xs lg:text-sm font-bold transition-colors ${pathname === '/dashboard' ? 'text-indigo-600' : 'text-gray-500 hover:text-gray-900'}`}
                                 >
                                     Dashboard
                                 </Link>
                                 <Link
                                     href="/plans"
-                                    className={`text-xs lg:text-sm font-bold transition-colors ${pathname === '/plans' ? 'text-indigo-400' : 'text-slate-400 hover:text-white'}`}
+                                    className={`text-xs lg:text-sm font-bold transition-colors ${pathname === '/plans' ? 'text-indigo-600' : 'text-gray-500 hover:text-gray-900'}`}
                                 >
                                     プラン
                                 </Link>
                                 <Link
                                     href="/chat"
-                                    className={`flex items-center space-x-1 text-xs lg:text-sm font-bold transition-colors ${pathname === '/chat' ? 'text-emerald-400' : 'text-slate-400 hover:text-white'}`}
+                                    className={`flex items-center space-x-1 text-xs lg:text-sm font-bold transition-colors ${pathname === '/chat' ? 'text-emerald-600' : 'text-gray-500 hover:text-gray-900'}`}
                                 >
                                     <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-emerald-500 rounded-full animate-pulse"></span>
                                     <span>AI Coaching (Chat)</span>
@@ -61,7 +61,7 @@ export default function Header() {
                             {/* モバイル用ハンバーガーメニューボタン */}
                             <button
                                 onClick={() => setIsMenuOpen(!isMenuOpen)}
-                                className="md:hidden p-2 text-slate-400 hover:text-white transition-colors"
+                                className="md:hidden p-2 text-gray-500 hover:text-gray-900 transition-colors"
                                 aria-label="メニューを開く"
                             >
                                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -80,16 +80,16 @@ export default function Header() {
                     {user ? (
                         <>
                             <div className="hidden lg:flex flex-col items-end">
-                                <span className="text-[9px] lg:text-[10px] text-indigo-300 font-bold uppercase tracking-widest leading-none mb-0.5 lg:mb-1">
+                                <span className="text-[9px] lg:text-[10px] text-indigo-600 font-bold uppercase tracking-widest leading-none mb-0.5 lg:mb-1">
                                     Logged in as
                                 </span>
-                                <span className="text-xs lg:text-sm text-white font-medium leading-none">
+                                <span className="text-xs lg:text-sm text-gray-900 font-medium leading-none">
                                     {user.email}
                                 </span>
                             </div>
                             <button
                                 onClick={logout}
-                                className="px-3 sm:px-5 py-1.5 sm:py-2 bg-white/5 hover:bg-red-500/10 border border-white/10 hover:border-red-500/30 text-white hover:text-red-300 font-bold text-[10px] sm:text-xs rounded-lg sm:rounded-xl transition-all duration-300 active:scale-95"
+                                className="px-3 sm:px-5 py-1.5 sm:py-2 bg-gray-100 hover:bg-red-50 border border-gray-200 hover:border-red-300 text-gray-700 hover:text-red-600 font-bold text-[10px] sm:text-xs rounded-lg sm:rounded-xl transition-all duration-300 active:scale-95"
                             >
                                 ログアウト
                             </button>
@@ -98,7 +98,7 @@ export default function Header() {
                         <div className="flex items-center space-x-2 sm:space-x-4">
                             <Link
                                 href="/login"
-                                className="text-white font-bold text-xs sm:text-sm hover:text-indigo-300 transition-colors"
+                                className="text-gray-700 font-bold text-xs sm:text-sm hover:text-indigo-600 transition-colors"
                             >
                                 ログイン
                             </Link>
@@ -115,33 +115,33 @@ export default function Header() {
 
             {/* モバイル用ドロップダウンメニュー */}
             {user && isMenuOpen && (
-                <div className="md:hidden mt-2 mx-3 bg-white/10 border border-white/10 backdrop-blur-xl rounded-xl shadow-xl overflow-hidden">
+                <div className="md:hidden mt-2 mx-3 bg-white/95 border border-gray-200 backdrop-blur-xl rounded-xl shadow-xl overflow-hidden">
                     <nav className="flex flex-col">
                         <Link
                             href="/lessons"
                             onClick={() => setIsMenuOpen(false)}
-                            className={`px-4 py-3 text-sm font-bold transition-colors border-b border-white/10 ${pathname === '/lessons' ? 'text-indigo-400 bg-white/5' : 'text-indigo-400 hover:text-indigo-300 hover:bg-white/5'}`}
+                            className={`px-4 py-3 text-sm font-bold transition-colors border-b border-gray-100 ${pathname === '/lessons' ? 'text-indigo-600 bg-indigo-50' : 'text-gray-700 hover:text-indigo-600 hover:bg-gray-50'}`}
                         >
                             過去の記事
                         </Link>
                         <Link
                             href="/dashboard"
                             onClick={() => setIsMenuOpen(false)}
-                            className={`px-4 py-3 text-sm font-bold transition-colors border-b border-white/10 ${pathname === '/dashboard' ? 'text-indigo-400 bg-white/5' : 'text-indigo-400 hover:text-indigo-300 hover:bg-white/5'}`}
+                            className={`px-4 py-3 text-sm font-bold transition-colors border-b border-gray-100 ${pathname === '/dashboard' ? 'text-indigo-600 bg-indigo-50' : 'text-gray-700 hover:text-indigo-600 hover:bg-gray-50'}`}
                         >
                             Dashboard
                         </Link>
                         <Link
                             href="/plans"
                             onClick={() => setIsMenuOpen(false)}
-                            className={`px-4 py-3 text-sm font-bold transition-colors border-b border-white/10 ${pathname === '/plans' ? 'text-indigo-400 bg-white/5' : 'text-indigo-400 hover:text-indigo-300 hover:bg-white/5'}`}
+                            className={`px-4 py-3 text-sm font-bold transition-colors border-b border-gray-100 ${pathname === '/plans' ? 'text-indigo-600 bg-indigo-50' : 'text-gray-700 hover:text-indigo-600 hover:bg-gray-50'}`}
                         >
                             プラン
                         </Link>
                         <Link
                             href="/chat"
                             onClick={() => setIsMenuOpen(false)}
-                            className={`px-4 py-3 text-sm font-bold transition-colors flex items-center space-x-2 ${pathname === '/chat' ? 'text-emerald-400 bg-white/5' : 'text-indigo-400 hover:text-indigo-300 hover:bg-white/5'}`}
+                            className={`px-4 py-3 text-sm font-bold transition-colors flex items-center space-x-2 ${pathname === '/chat' ? 'text-emerald-600 bg-emerald-50' : 'text-gray-700 hover:text-emerald-600 hover:bg-gray-50'}`}
                         >
                             <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span>
                             <span>AI Coaching (Chat)</span>
