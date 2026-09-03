@@ -1,3 +1,10 @@
+import {
+  stripePaymentLinkBasicMonthly,
+  stripePaymentLinkBasicYearly,
+  stripePaymentLinkPremiumMonthly,
+  stripePaymentLinkPremiumYearly,
+} from '@/lib/stripePaymentLinks';
+
 type PlanCard = {
   key: string;
   planName: 'Basic' | 'Premium';
@@ -18,7 +25,7 @@ const PLANS: PlanCard[] = [
     priceMain: '¥2,980',
     priceSub: '/月',
     description: '月額制のプランです。いつでもキャンセル可能です。',
-    href: 'https://buy.stripe.com/cNi5kD8L16tPapN5Wc5gc04',
+    href: stripePaymentLinkBasicMonthly,
     theme: 'indigo',
   },
   {
@@ -29,7 +36,7 @@ const PLANS: PlanCard[] = [
     priceSub: '/年',
     badge: 'お得',
     description: '1年分をまとめて購入。月額より約17%お得です。',
-    href: 'https://buy.stripe.com/4gM28r0evbO99lJ4S85gc05',
+    href: stripePaymentLinkBasicYearly,
     theme: 'indigo',
   },
   {
@@ -39,7 +46,7 @@ const PLANS: PlanCard[] = [
     priceMain: '¥4,980',
     priceSub: '/月',
     description: '月額制のプランです。いつでもキャンセル可能です。',
-    href: 'https://buy.stripe.com/00w00j0ev05rcxV84k5gc06',
+    href: stripePaymentLinkPremiumMonthly,
     theme: 'purple',
   },
   {
@@ -50,7 +57,7 @@ const PLANS: PlanCard[] = [
     priceSub: '/年',
     badge: 'お得',
     description: '1年分をまとめて購入。月額より約17%お得です。',
-    href: 'https://buy.stripe.com/14A6oHd1h5pL2Xl2K05gc07',
+    href: stripePaymentLinkPremiumYearly,
     theme: 'purple',
   },
 ];

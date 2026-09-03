@@ -4,6 +4,10 @@ import React from "react";
 import { motion } from "framer-motion";
 import { ArrowRight, Brain, Zap, Globe, BookOpen, MessageSquare, TrendingUp, CheckCircle2, Clock, BarChart3, Eye, Target, AlertCircle, RefreshCw, Sparkles, Crown, Users, Lightbulb, Award, Briefcase, Globe2, MessageCircle } from "lucide-react";
 import Link from 'next/link';
+import {
+  stripePaymentLinkBasicMonthly,
+  stripePaymentLinkPremiumMonthly,
+} from '@/lib/stripePaymentLinks';
 import { useAuth } from './lib/auth-context';
 
 // アニメーション用のコンポーネント
@@ -638,7 +642,7 @@ export default function LandingPage() {
                 </ul>
                 {user ? (
                   <a
-                    href="https://buy.stripe.com/cNi5kD8L16tPapN5Wc5gc04"
+                    href={stripePaymentLinkBasicMonthly}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="block w-full px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-full transition-colors text-center"
@@ -704,7 +708,7 @@ export default function LandingPage() {
                 </ul>
                 {user ? (
                   <a
-                    href="https://buy.stripe.com/00w00j0ev05rcxV84k5gc06"
+                    href={stripePaymentLinkPremiumMonthly}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="block w-full px-6 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold rounded-full transition-colors shadow-lg text-center"
@@ -966,7 +970,7 @@ export default function LandingPage() {
                     <span className="text-gray-600">/月</span>
                   </div>
                   <a
-                    href="https://buy.stripe.com/cNi5kD8L16tPapN5Wc5gc04"
+                    href={stripePaymentLinkBasicMonthly}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="block w-full px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-full transition-colors"
@@ -991,7 +995,7 @@ export default function LandingPage() {
                     <span className="text-gray-600">/月</span>
                   </div>
                   <a
-                    href="https://buy.stripe.com/00w00j0ev05rcxV84k5gc06"
+                    href={stripePaymentLinkPremiumMonthly}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="block w-full px-6 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold rounded-full transition-colors shadow-lg"
