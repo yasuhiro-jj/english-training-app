@@ -409,8 +409,12 @@ class StripeService:
         if plan:
             return plan
         
-        # フォールバック: 不明なprice_idの場合はログに残してBasicとして扱う
-        logger.warning(f"Unknown price_id: {price_id}, defaulting to Basic")
+        # フォールバック: 不明なprice_id。PRICE_MAPの更新漏れの可能性が高いため
+        # ERRORで残す（顧客に誤ったプランを付与していないか手動確認が必要）
+        logger.error(
+            f"Unknown Stripe price_id: {price_id}. Defaulting to Basic — "
+            f"verify PRICE_MAP is up to date and check this customer's actual plan."
+        )
         return "Basic"
 
     def _map_stripe_status(self, stripe_status: str) -> str:

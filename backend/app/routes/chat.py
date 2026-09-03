@@ -50,4 +50,4 @@ async def chat(request: ChatRequest, user: dict = Depends(get_current_user)):
         raise
     except Exception as e:
         print(f"CHAT ERROR: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="チャット応答の生成に失敗しました。しばらくしてから再度お試しください。")

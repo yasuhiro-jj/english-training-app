@@ -2,6 +2,9 @@ from fastapi import APIRouter, HTTPException, Depends
 from app.services.notion_service import NotionService
 from app.services.usage_service import UsageService
 from app.deps import get_current_user
+import logging
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/dashboard", tags=["dashboard"])
 notion_service = NotionService()
@@ -45,4 +48,5 @@ async def get_dashboard_stats(user: dict = Depends(get_current_user)):
             "usage": usage_info
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Failed to load dashboard stats for {email}: {e}")
+        raise HTTPException(status_code=500, detail="ダッシュボードの読み込みに失敗しました。")

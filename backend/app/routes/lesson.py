@@ -4,7 +4,6 @@ from app.services import AIService, NewsService, NotionService
 from app.deps import get_current_user
 import logging
 from typing import List, Dict
-from datetime import datetime
 
 router = APIRouter(prefix="/api/lesson", tags=["lesson"])
 
@@ -97,7 +96,7 @@ async def generate_lesson(
         logger.error(f"予期しないエラー: {str(e)}", exc_info=True)
         raise HTTPException(
             status_code=500,
-            detail=f"レッスン生成中にエラーが発生しました: {str(e)}"
+            detail="レッスン生成中にエラーが発生しました。しばらくしてから再度お試しください。"
         )
 
 
@@ -178,7 +177,7 @@ async def generate_lesson_auto(user: dict = Depends(get_current_user), level: in
         logger.error(f"予期しないエラー: {str(e)}", exc_info=True)
         raise HTTPException(
             status_code=500,
-            detail=f"レッスン生成中にエラーが発生しました: {str(e)}"
+            detail="レッスン生成中にエラーが発生しました。しばらくしてから再度お試しください。"
         )
 
 
@@ -208,95 +207,7 @@ async def get_lesson_history(
         logger.error(f"レッスン履歴の取得に失敗: {e}")
         raise HTTPException(
             status_code=500,
-            detail=f"レッスン履歴の取得に失敗しました: {str(e)}"
+            detail="レッスン履歴の取得に失敗しました。"
         )
 
 
-@router.get("/debug/notion-config")
-async def debug_notion_config(user: dict = Depends(get_current_user)):
-    """
-    デバッグ用: Notion設定の確認（認証必要）
-    """
-    import os
-    from app.services.notion_service import NotionService
-    
-    notion_service = NotionService()
-    
-    return {
-        "lessons_db_id_configured": bool(notion_service.lessons_db_id),
-        "lessons_db_id_value": notion_service.lessons_db_id[:20] + "..." if notion_service.lessons_db_id else None,
-        "notion_token_configured": bool(os.getenv("NOTION_TOKEN")),
-        "user_email": user.get("email", ""),
-    }
-
-
-@router.get("/debug/notion-config/public")
-async def debug_notion_config_public():
-    """
-    デバッグ用: Notion設定の確認（認証不要・公開エンドポイント）
-    注意: 本番環境では削除または認証を追加してください
-    """
-    import os
-    from app.services.notion_service import NotionService
-    
-    notion_service = NotionService()
-    
-    return {
-        "lessons_db_id_configured": bool(notion_service.lessons_db_id),
-        "lessons_db_id_value": notion_service.lessons_db_id[:20] + "..." if notion_service.lessons_db_id else None,
-        "lessons_db_id_full": notion_service.lessons_db_id if notion_service.lessons_db_id else None,
-        "notion_token_configured": bool(os.getenv("NOTION_TOKEN")),
-        "notion_token_length": len(os.getenv("NOTION_TOKEN", "")),
-    }
-
-
-@router.post("/debug/test-notion-save")
-async def test_notion_save(user: dict = Depends(get_current_user)):
-    """
-    デバッグ用: Notionへの保存をテスト（認証必要）
-    実際にテストデータをNotionに保存して動作確認
-    """
-    from app.services.notion_service import NotionService
-    
-    notion_service = NotionService()
-    user_email = user.get("email", "")
-    
-    # テスト用のレッスンデータ
-    test_lesson = {
-        "title": f"Test Lesson - {datetime.now().strftime('%Y%m%d_%H%M%S')}",
-        "date": datetime.now().isoformat(),
-        "category": "Test",
-        "level": "B1",
-        "content": "This is a test lesson content.",
-        "vocabulary": [],
-        "discussion_a": ["Test question 1"],
-        "discussion_b": ["Test question 2"],
-        "question": "What is this test about?",
-        "japanese_title": "テスト記事"
-    }
-    
-    try:
-        logger.info(f"Testing Notion save with test lesson: {test_lesson['title']}")
-        page_id = notion_service.save_lesson(test_lesson, user_email)
-        
-        if page_id:
-            return {
-                "success": True,
-                "message": "テストデータがNotionに正常に保存されました",
-                "page_id": page_id,
-                "test_lesson": test_lesson
-            }
-        else:
-            return {
-                "success": False,
-                "message": "Notionへの保存が失敗しました（page_idがNone）",
-                "test_lesson": test_lesson
-            }
-    except Exception as e:
-        logger.error(f"Test Notion save failed: {e}", exc_info=True)
-        return {
-            "success": False,
-            "message": f"エラーが発生しました: {str(e)}",
-            "error_type": type(e).__name__,
-            "test_lesson": test_lesson
-        }

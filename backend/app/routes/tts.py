@@ -3,7 +3,9 @@ from app.deps import get_current_user
 from app.models.schemas import TtsSpeakRequest
 from app.services.tts_service import TtsService
 from app.services.usage_service import UsageService
+import logging
 
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/tts", tags=["tts"])
 
@@ -55,5 +57,6 @@ async def speak(request: TtsSpeakRequest, user: dict = Depends(get_current_user)
             headers={"Cache-Control": "no-store"},
         )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"TTS generation failed for {user_email}: {e}")
+        raise HTTPException(status_code=500, detail="音声生成に失敗しました。しばらくしてから再度お試しください。")
 
