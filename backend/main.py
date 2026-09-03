@@ -49,20 +49,19 @@ async def root():
 
 @app.get("/health")
 async def health_check():
-    """詳細なヘルスチェック"""
+    """
+    詳細なヘルスチェック（起動時の設定漏れ検知用）。
+    シークレットやDB IDの値そのものは返さず、設定有無のみを返す。
+    """
     return {
         "status": "healthy",
         "openai_configured": bool(os.getenv("OPENAI_API_KEY")),
         "notion_token_configured": bool(os.getenv("NOTION_TOKEN")),
         "notion_user_db_configured": bool(os.getenv("NOTION_USER_DATABASE_ID")),
-        "notion_user_db_id_value": os.getenv("NOTION_USER_DATABASE_ID", "NOT_SET")[:20] + "..." if os.getenv("NOTION_USER_DATABASE_ID") else "NOT_SET",
-        "notion_user_email_property": os.getenv("NOTION_USER_EMAIL_PROPERTY", "Email"),
-        "notion_subscription_plan_property": os.getenv("NOTION_SUBSCRIPTION_PLAN_PROPERTY", "Subscription Plan"),
-        "notion_subscription_status_property": os.getenv("NOTION_SUBSCRIPTION_STATUS_PROPERTY", "Subscription Status"),
-        "notion_db_conversation_id": bool(os.getenv("NOTION_CONVERSATION_DB_ID")),
-        "notion_db_feedback_id": bool(os.getenv("NOTION_FEEDBACK_DB_ID")),
-        "notion_db_lessons_id": bool(os.getenv("NOTION_LESSONS_DB_ID")),
-        "notion_db_lessons_id_value": os.getenv("NOTION_LESSONS_DB_ID", "NOT_SET")[:20] + "..." if os.getenv("NOTION_LESSONS_DB_ID") else "NOT_SET",
+        "notion_db_conversation_configured": bool(os.getenv("NOTION_CONVERSATION_DB_ID")),
+        "notion_db_feedback_configured": bool(os.getenv("NOTION_FEEDBACK_DB_ID")),
+        "notion_db_lessons_configured": bool(os.getenv("NOTION_LESSONS_DB_ID")),
+        "jwt_secret_configured": bool(os.getenv("JWT_SECRET_KEY")),
         "stripe_secret_configured": bool(os.getenv("STRIPE_SECRET_KEY")),
         "stripe_webhook_secret_configured": bool(os.getenv("STRIPE_WEBHOOK_SECRET")),
     }

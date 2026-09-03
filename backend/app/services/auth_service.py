@@ -14,7 +14,13 @@ class AuthService:
     def __init__(self):
         self.client = Client(auth=os.getenv("NOTION_TOKEN"))
         self.user_db_id = os.getenv("NOTION_USER_DATABASE_ID")
-        self.secret_key = os.getenv("JWT_SECRET_KEY", "your-secret-key")
+        secret_key = os.getenv("JWT_SECRET_KEY")
+        if not secret_key:
+            raise RuntimeError(
+                "JWT_SECRET_KEY is not set. Refusing to start with an insecure "
+                "default secret. Set JWT_SECRET_KEY in the environment."
+            )
+        self.secret_key = secret_key
         self.algorithm = "HS256"
         self.access_token_expire_days = 7
 
