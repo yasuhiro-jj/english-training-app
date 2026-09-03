@@ -1,1 +1,20 @@
-chroma_db/chroma.sqlite3 
+chroma_db/chroma.sqlite3
+
+# Python cache
+__pycache__/
+*.py[cod]
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# OneDrive sync-conflict copies
+*-DESKTOP-*
