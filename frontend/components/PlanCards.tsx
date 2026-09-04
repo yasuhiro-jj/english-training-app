@@ -95,7 +95,7 @@ export function PlanCards() {
             className={`bg-white border-2 rounded-xl p-6 transition-all relative ${t.border}`}
           >
             {p.badge && (
-              <div className={`absolute top-4 right-4 px-2 py-1 text-white text-xs font-bold rounded ${t.badge}`}>
+              <div className={`absolute -top-2.5 left-4 px-2 py-0.5 text-white text-xs font-bold rounded-full shadow-sm ${t.badge}`}>
                 {p.badge}
               </div>
             )}
