@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { PlanCards } from '../../components/PlanCards';
+import { PlanComparisonTable } from '../../components/PlanComparisonTable';
 
 export default function PlansPage() {
   return (
@@ -18,6 +19,10 @@ export default function PlansPage() {
         </header>
 
         <PlanCards />
+
+        <div className="mt-12">
+          <PlanComparisonTable />
+        </div>
 
         <div className="mt-10 flex items-center justify-center gap-4">
           <Link
