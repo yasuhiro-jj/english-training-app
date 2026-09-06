@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.deepspeak.twa",
+      "sha256_cert_fingerprints": [
+        "19:2D:21:92:E7:ED:3E:6A:E2:FD:91:F9:AA:0B:B6:B8:A3:43:14:7A:1D:4A:30:3B:7F:D1:43:4E:87:3F:BE:F1"
+      ]
+    }
+  }
+]
