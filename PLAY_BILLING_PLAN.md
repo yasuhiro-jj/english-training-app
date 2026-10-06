@@ -32,6 +32,7 @@ Android アプリ(TWA)内の有料プランは Google Play 課金、Web ブラ�
 - TWA(`C:\dev\android-twa`、リポジトリ外)
   - `billing:1.2.0` の追加、`PaymentActivity` / `PaymentService` の追加、`DelegationService` に `DigitalGoodsRequestHandler` を登録(Bubblewrap の playBilling 機能と同じ内容を手で反映)。
   - `twa-manifest.json` に `features.playBilling`、versionCode 12 / 1.0.4。
+  - Play課金ライブラリの要件で minSdk を 21 → 23(Android 6.0以上)に変更。デバッグビルド(`gradlew assembleDebug`)の成功を確認済み。
 
 ## 公開までに必要な作業(手動・要承認)
 
