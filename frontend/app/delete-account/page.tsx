@@ -41,7 +41,7 @@ export default function DeleteAccountPage() {
             <ul className="list-disc list-inside space-y-1">
               <li>アカウント情報(メールアドレス、パスワードのハッシュ値)</li>
               <li>学習・会話ログ、AIによるフィードバック履歴</li>
-              <li>サブスクリプション・決済に関する紐付け情報(決済自体の記録はStripe側の法令上の保存義務に基づき別途保持される場合があります)</li>
+              <li>サブスクリプション・決済に関する紐付け情報(決済自体の記録はStripeまたはGoogle Play側の法令上の保存義務に基づき別途保持される場合があります。Google Playの定期購入は、アカウントを削除しても自動では解約されないため、Google Playの「定期購入」から別途解約してください)</li>
             </ul>
           </section>
 

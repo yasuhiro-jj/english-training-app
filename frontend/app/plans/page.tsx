@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { PlanCards } from '../../components/PlanCards';
+import { WebOnly } from '../../components/AppEnv';
 import { PlanComparisonTable } from '../../components/PlanComparisonTable';
 
 export default function PlansPage() {
@@ -13,9 +14,11 @@ export default function PlansPage() {
           <p className="mt-3 text-gray-700">
             ご希望のプランを選択して決済に進んでください。
           </p>
+          <WebOnly>
           <p className="mt-2 text-sm text-indigo-700 font-semibold">
             ⚠️ 自動課金は一切発生しません。選択したプランのみ決済されます。
           </p>
+          </WebOnly>
         </header>
 
         <PlanCards />

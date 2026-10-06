@@ -10,6 +10,7 @@ import {
 } from '@/lib/stripePaymentLinks';
 import { useAuth } from './lib/auth-context';
 import { PlanComparisonTable } from '../components/PlanComparisonTable';
+import { useAndroidApp, WebOnly, AndroidOnly } from '../components/AppEnv';
 
 // アニメーション用のコンポーネント
 const FadeInUp = ({ children, delay = 0 }: { children: React.ReactNode; delay?: number }) => (
@@ -73,6 +74,7 @@ const SolutionCard = ({ number, title, desc, features }: { number: string; title
 
 export default function LandingPage() {
   const { user } = useAuth();
+  const isApp = useAndroidApp();
 
   return (
     <main className="w-full min-h-screen bg-white text-gray-900 overflow-x-hidden">
@@ -643,9 +645,9 @@ export default function LandingPage() {
                 </ul>
                 {user ? (
                   <a
-                    href={stripePaymentLinkBasicMonthly}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                    href={isApp === false ? stripePaymentLinkBasicMonthly : '/plans'}
+                    target={isApp === false ? "_blank" : undefined}
+                    rel={isApp === false ? "noopener noreferrer" : undefined}
                     className="block w-full px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-full transition-colors text-center"
                   >
                     今すぐ始める
@@ -709,9 +711,9 @@ export default function LandingPage() {
                 </ul>
                 {user ? (
                   <a
-                    href={stripePaymentLinkPremiumMonthly}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                    href={isApp === false ? stripePaymentLinkPremiumMonthly : '/plans'}
+                    target={isApp === false ? "_blank" : undefined}
+                    rel={isApp === false ? "noopener noreferrer" : undefined}
                     className="block w-full px-6 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold rounded-full transition-colors shadow-lg text-center"
                   >
                     今すぐ始める
@@ -860,9 +862,9 @@ export default function LandingPage() {
                     <span className="text-gray-600">/月</span>
                   </div>
                   <a
-                    href={stripePaymentLinkBasicMonthly}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                    href={isApp === false ? stripePaymentLinkBasicMonthly : '/plans'}
+                    target={isApp === false ? "_blank" : undefined}
+                    rel={isApp === false ? "noopener noreferrer" : undefined}
                     className="block w-full px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-full transition-colors"
                   >
                     今すぐ始める
@@ -885,9 +887,9 @@ export default function LandingPage() {
                     <span className="text-gray-600">/月</span>
                   </div>
                   <a
-                    href={stripePaymentLinkPremiumMonthly}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                    href={isApp === false ? stripePaymentLinkPremiumMonthly : '/plans'}
+                    target={isApp === false ? "_blank" : undefined}
+                    rel={isApp === false ? "noopener noreferrer" : undefined}
                     className="block w-full px-6 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold rounded-full transition-colors shadow-lg"
                   >
                     今すぐ始める
@@ -902,10 +904,17 @@ export default function LandingPage() {
                   <AlertCircle className="w-6 h-6 text-blue-600 mr-4 mt-1 flex-shrink-0" />
                   <div>
                     <h4 className="font-bold text-gray-900 mb-2">自動課金について</h4>
-                    <p className="text-gray-700 text-sm leading-relaxed">
-                      <span className="font-semibold">自動課金は一切発生しません。</span>
-                      選択したプランのみ決済されます。いつでもキャンセル可能です。
-                    </p>
+                    <WebOnly>
+                      <p className="text-gray-700 text-sm leading-relaxed">
+                        <span className="font-semibold">自動課金は一切発生しません。</span>
+                        選択したプランのみ決済されます。いつでもキャンセル可能です。
+                      </p>
+                    </WebOnly>
+                    <AndroidOnly>
+                      <p className="text-gray-700 text-sm leading-relaxed">
+                        有料プランは Google Play の定期購入として自動更新されます。解約は Google Play の「定期購入」からいつでも行えます。
+                      </p>
+                    </AndroidOnly>
                   </div>
                 </div>
               </div>

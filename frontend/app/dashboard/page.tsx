@@ -6,6 +6,7 @@ import { useRequireAuth } from '../lib/hooks/useRequireAuth';
 import { useRouter } from 'next/navigation';
 import AIChat from '../../components/AIChat';
 import { PlanCards } from '../../components/PlanCards';
+import { WebOnly } from '../../components/AppEnv';
 
 export default function DashboardPage() {
     const { user, loading: authLoading } = useRequireAuth();
@@ -200,9 +201,11 @@ export default function DashboardPage() {
                                 <p className="text-gray-700 mb-2">
                                     7日間の無料体験期間が終了しました。引き続きご利用いただく場合は、以下のプランからお選びください。
                                 </p>
+                                <WebOnly>
                                 <p className="text-sm text-indigo-600 font-semibold mb-4">
                                     ⚠️ 自動課金は一切発生しません。ご希望のプランを選択してから決済を行ってください。
                                 </p>
+                                </WebOnly>
                             </div>
                         </div>
                         
@@ -329,9 +332,11 @@ export default function DashboardPage() {
                                 <p className="text-gray-700">
                                     必要になったタイミングで、Basic / Premium（月額・年間）から選べます。
                                 </p>
+                                <WebOnly>
                                 <p className="text-sm text-indigo-700 font-semibold mt-2">
                                     ⚠️ 自動課金は一切発生しません。
                                 </p>
+                                </WebOnly>
                             </div>
                             <button
                                 onClick={() => router.push('/plans')}

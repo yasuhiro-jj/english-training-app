@@ -52,7 +52,8 @@ export default function PrivacyPolicyPage() {
             </p>
             <ul className="list-disc list-inside space-y-1">
               <li><span className="font-semibold">OpenAI, L.L.C.</span> — 入力されたテキスト・音声データをAIによる応答生成・音声認識のために処理します</li>
-              <li><span className="font-semibold">Stripe, Inc.</span> — 決済処理・サブスクリプション管理を行います。カード情報等はStripeが直接管理し、本サービスのサーバーには保存されません</li>
+              <li><span className="font-semibold">Stripe, Inc.</span> — Webブラウザからの決済処理・サブスクリプション管理を行います。カード情報等はStripeが直接管理し、本サービスのサーバーには保存されません</li>
+              <li><span className="font-semibold">Google LLC(Google Play)</span> — Androidアプリからの決済処理・定期購入管理を行います。お支払い情報はGoogleが直接管理し、本サービスのサーバーには保存されません。本サービスは、購入の確認のため、購入トークンと購入状態(プラン・有効期限)をGoogle Play Developer APIを通じて取得し、アカウントに紐づけて保存します</li>
               <li><span className="font-semibold">Notion Labs, Inc.</span> — アカウント情報・学習履歴データの保管先として利用しています</li>
             </ul>
             <p className="mt-2">

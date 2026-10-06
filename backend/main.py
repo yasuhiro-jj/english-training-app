@@ -6,7 +6,7 @@ import os
 # Load environment variables FIRST
 load_dotenv()
 
-from app.routes import session_router, auth_router, chat_router, dashboard_router, lesson_router, tts_router, stripe_webhook_router, feedback_router
+from app.routes import session_router, auth_router, chat_router, dashboard_router, lesson_router, tts_router, stripe_webhook_router, feedback_router, play_billing_router
 from app.routes import whisper as whisper_router
 
 
@@ -37,6 +37,7 @@ app.include_router(lesson_router)
 app.include_router(tts_router)
 app.include_router(stripe_webhook_router)
 app.include_router(feedback_router)
+app.include_router(play_billing_router)
 app.include_router(whisper_router.router)
 
 @app.get("/")
@@ -64,6 +65,8 @@ async def health_check():
         "jwt_secret_configured": bool(os.getenv("JWT_SECRET_KEY")),
         "stripe_secret_configured": bool(os.getenv("STRIPE_SECRET_KEY")),
         "stripe_webhook_secret_configured": bool(os.getenv("STRIPE_WEBHOOK_SECRET")),
+        "google_play_configured": bool(os.getenv("GOOGLE_PLAY_SERVICE_ACCOUNT_JSON")),
+        "google_play_rtdn_secret_configured": bool(os.getenv("GOOGLE_PLAY_RTDN_SECRET")),
     }
 
 if __name__ == "__main__":

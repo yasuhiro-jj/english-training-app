@@ -104,6 +104,18 @@ const authenticatedFetch = async (url: string, options: RequestInit = {}) => {
 };
 
 export const api = {
+    async verifyPlayPurchase(productId: string, purchaseToken: string): Promise<{ plan: string; status: string }> {
+        const response = await authenticatedFetch(`${API_URL}/api/play/verify`, {
+            method: 'POST',
+            body: JSON.stringify({ product_id: productId, purchase_token: purchaseToken }),
+        });
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.detail || '購入の確認に失敗しました');
+        }
+        return response.json();
+    },
+
     async generateLessons(level: number = 2): Promise<LessonGenerateResponse> {
         const response = await authenticatedFetch(`${API_URL}/api/session/generate?level=${level}`, {
             method: 'GET',
