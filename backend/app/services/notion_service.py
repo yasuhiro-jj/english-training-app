@@ -234,24 +234,36 @@ class NotionService:
                     }
                 }
 
-            response = self.client.databases.query(
-                database_id=self.feedback_db_id,
-                filter=query_filter,
-                sorts=[{"timestamp": "created_time", "direction": "descending"}],
-                page_size=limit
-            )
-            
             feedback_list = []
-            for page in response["results"]:
-                props = page["properties"]
-                feedback_list.append({
-                    "original_sentence": props["OriginalSentence"]["title"][0]["text"]["content"] if props["OriginalSentence"]["title"] else "",
-                    "corrected_sentence": props["CorrectedSentence"]["rich_text"][0]["text"]["content"] if props["CorrectedSentence"]["rich_text"] else "",
-                    "category": props["Category"]["select"]["name"] if props["Category"]["select"] else "",
-                    "reason": props["Reason"]["rich_text"][0]["text"]["content"] if props["Reason"]["rich_text"] else "",
-                    "status": props["Status"]["select"]["name"] if props["Status"]["select"] else ""
-                })
-            
+            cursor = None
+            # Notionは1回のクエリで最大100件のため、必要な件数に達するまで続きを取得する
+            while len(feedback_list) < limit:
+                query_kwargs = {
+                    "database_id": self.feedback_db_id,
+                    "sorts": [{"timestamp": "created_time", "direction": "descending"}],
+                    "page_size": min(100, limit - len(feedback_list)),
+                }
+                if query_filter is not None:
+                    query_kwargs["filter"] = query_filter
+                if cursor:
+                    query_kwargs["start_cursor"] = cursor
+
+                response = self.client.databases.query(**query_kwargs)
+
+                for page in response["results"]:
+                    props = page["properties"]
+                    feedback_list.append({
+                        "original_sentence": props["OriginalSentence"]["title"][0]["text"]["content"] if props["OriginalSentence"]["title"] else "",
+                        "corrected_sentence": props["CorrectedSentence"]["rich_text"][0]["text"]["content"] if props["CorrectedSentence"]["rich_text"] else "",
+                        "category": props["Category"]["select"]["name"] if props["Category"]["select"] else "",
+                        "reason": props["Reason"]["rich_text"][0]["text"]["content"] if props["Reason"]["rich_text"] else "",
+                        "status": props["Status"]["select"]["name"] if props["Status"]["select"] else ""
+                    })
+
+                if not response.get("has_more"):
+                    break
+                cursor = response.get("next_cursor")
+
             return feedback_list
         except Exception as e:
             print(f"Error getting recent feedback: {e}")

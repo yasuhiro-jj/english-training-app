@@ -253,6 +253,7 @@ async def submit_transcript(request: TranscriptSubmit, user: dict = Depends(get_
 async def get_recent_feedback(limit: int = 10, user: dict = Depends(get_current_user)):
     """最近のフィードバックを取得"""
     try:
+        limit = max(1, min(limit, 500))
         feedback = notion_service.get_recent_feedback(email=user.get("email"), limit=limit)
         return {"feedback": feedback}
     except Exception as e:

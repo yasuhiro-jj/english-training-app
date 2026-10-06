@@ -55,7 +55,7 @@ export default function Header() {
                     {user && (
                         <>
                             {/* デスクトップ用ナビゲーション */}
-                            <nav className="hidden md:flex items-center space-x-4 lg:space-x-6">
+                            <nav className="hidden lg:flex items-center space-x-4 lg:space-x-6">
                                 <Link
                                     href="/lessons"
                                     className={`text-xs lg:text-sm font-bold transition-colors ${pathname === '/lessons' ? 'text-indigo-600' : 'text-gray-500 hover:text-gray-900'}`}
@@ -67,6 +67,12 @@ export default function Header() {
                                     className={`text-xs lg:text-sm font-bold transition-colors ${pathname === '/feedback' ? 'text-indigo-600' : 'text-gray-500 hover:text-gray-900'}`}
                                 >
                                     フィードバック
+                                </Link>
+                                <Link
+                                    href="/advice"
+                                    className={`text-xs lg:text-sm font-bold transition-colors ${pathname === '/advice' ? 'text-indigo-600' : 'text-gray-500 hover:text-gray-900'}`}
+                                >
+                                    アドバイス一覧
                                 </Link>
                                 <Link
                                     href="/dashboard"
@@ -92,7 +98,7 @@ export default function Header() {
                             {/* モバイル用ハンバーガーメニューボタン */}
                             <button
                                 onClick={() => setIsMenuOpen(!isMenuOpen)}
-                                className="md:hidden p-2 text-gray-500 hover:text-gray-900 transition-colors"
+                                className="lg:hidden p-2 text-gray-500 hover:text-gray-900 transition-colors"
                                 aria-label="メニューを開く"
                             >
                                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -146,7 +152,7 @@ export default function Header() {
 
             {/* モバイル用ドロップダウンメニュー */}
             {user && isMenuOpen && (
-                <div className="md:hidden mt-2 mx-3 bg-white/95 border border-gray-200 backdrop-blur-xl rounded-xl shadow-xl overflow-hidden">
+                <div className="lg:hidden mt-2 mx-3 bg-white/95 border border-gray-200 backdrop-blur-xl rounded-xl shadow-xl overflow-hidden">
                     <nav className="flex flex-col">
                         <Link
                             href="/lessons"
@@ -161,6 +167,13 @@ export default function Header() {
                             className={`px-4 py-3 text-sm font-bold transition-colors border-b border-gray-100 ${pathname === '/feedback' ? 'text-indigo-600 bg-indigo-50' : 'text-gray-700 hover:text-indigo-600 hover:bg-gray-50'}`}
                         >
                             これまでのフィードバック
+                        </Link>
+                        <Link
+                            href="/advice"
+                            onClick={() => setIsMenuOpen(false)}
+                            className={`px-4 py-3 text-sm font-bold transition-colors border-b border-gray-100 ${pathname === '/advice' ? 'text-indigo-600 bg-indigo-50' : 'text-gray-700 hover:text-indigo-600 hover:bg-gray-50'}`}
+                        >
+                            アドバイス一覧
                         </Link>
                         <Link
                             href="/dashboard"
