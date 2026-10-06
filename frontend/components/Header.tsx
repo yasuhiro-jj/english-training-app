@@ -2,13 +2,26 @@
 
 import Link from 'next/link';
 import { useAuth } from '../app/lib/auth-context';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useState } from 'react';
 
 export default function Header() {
     const { user, logout } = useAuth();
     const pathname = usePathname();
+    const router = useRouter();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
+
+    // ダッシュボードは戻り先がなく、レッスン画面(/session)は画面内の各ステップに専用の戻るボタンがある
+    const showBackButton = pathname !== '/dashboard' && pathname !== '/session';
+
+    const handleBack = () => {
+        setIsMenuOpen(false);
+        if (typeof window !== 'undefined' && window.history.length > 1) {
+            router.back();
+        } else {
+            router.push('/dashboard');
+        }
+    };
 
     // ランディングページ、ログイン画面、サインアップ画面ではヘッダーを非表示にする
     // ランディングページには独自のヘッダーがあるため
@@ -18,6 +31,18 @@ export default function Header() {
         <header className="fixed top-0 left-0 right-0 z-50 px-3 sm:px-6 py-2 sm:py-4">
             <div className="max-w-7xl mx-auto flex items-center justify-between bg-white/90 border border-gray-200 backdrop-blur-xl rounded-xl sm:rounded-2xl px-3 sm:px-6 py-2 sm:py-2.5 shadow-xl">
                 <div className="flex items-center space-x-3 sm:space-x-8">
+                    {showBackButton && (
+                        <button
+                            onClick={handleBack}
+                            className="flex items-center space-x-1 text-indigo-600 hover:text-indigo-800 font-bold text-xs sm:text-sm transition-colors"
+                            aria-label="前のページに戻る"
+                        >
+                            <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                            </svg>
+                            <span>戻る</span>
+                        </button>
+                    )}
                     <Link href="/" className="flex items-center space-x-1.5 sm:space-x-2 group">
                         <div className="w-7 h-7 sm:w-8 sm:h-8 bg-indigo-600 rounded-lg flex items-center justify-center group-hover:bg-indigo-500 transition-colors">
                             <span className="text-white font-black text-[10px] sm:text-xs">DS</span>

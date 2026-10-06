@@ -4,6 +4,7 @@ import { Suspense, useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { api, LessonOption } from '../../lib/api';
 import AudioRecorder from '../../components/AudioRecorder';
+import GenerationProgress, { saveGenerationSeconds } from '../../components/GenerationProgress';
 import { useRequireAuth } from '../lib/hooks/useRequireAuth';
 
 function normalizeString(value: unknown): string {
@@ -926,12 +927,14 @@ function SessionPageInner() {
         console.log('[Session] handleGenerate started');
         setIsGenerating(true);
         setError('');
+        const generationStartedAt = Date.now();
         try {
             // URLパラメータから難易度を取得（デフォルトは2=中級）
             const levelParam = searchParams.get('level');
             const level = levelParam ? parseInt(levelParam, 10) : 2;
             console.log('[Session] Generating lessons with level:', level);
             const response = await api.generateLessons(level);
+            saveGenerationSeconds((Date.now() - generationStartedAt) / 1000);
             console.log('[Session] handleGenerate success:', response);
             setLessons((response.lessons || []).map((l) => normalizeLesson(l)));
             setStep('selection');
@@ -994,6 +997,14 @@ function SessionPageInner() {
         }
     };
 
+    const handleBack = () => {
+        setError('');
+        if (step === 'recording') setStep('learning');
+        else if (step === 'complete') setStep('learning');
+        else if (step === 'learning') setStep(lessons.length > 0 ? 'selection' : 'input');
+        else if (step === 'selection') setStep('input');
+    };
+
     const handleReset = () => {
         setStep('input');
         setArticleUrl('');
@@ -1011,12 +1022,21 @@ function SessionPageInner() {
         <div className="min-h-screen bg-gray-50 pt-32 pb-12 font-sans">
             <div className="container mx-auto px-4 max-w-4xl">
                 <div className="mb-6">
-                    <a href="/dashboard" className="text-indigo-600 hover:text-indigo-800 flex items-center space-x-2">
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                        </svg>
-                        <span>ダッシュボードに戻る</span>
-                    </a>
+                    {step === 'input' ? (
+                        <a href="/dashboard" className="text-indigo-600 hover:text-indigo-800 flex items-center space-x-2">
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                            </svg>
+                            <span>ダッシュボードに戻る</span>
+                        </a>
+                    ) : step !== 'analyzing' && step !== 'preparing' ? (
+                        <button onClick={handleBack} className="text-indigo-600 hover:text-indigo-800 flex items-center space-x-2 font-semibold">
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                            </svg>
+                            <span>前に戻る</span>
+                        </button>
+                    ) : null}
                 </div>
 
                 <div className="bg-white rounded-2xl shadow-xl p-8">
@@ -1053,11 +1073,7 @@ function SessionPageInner() {
                                 )}
                             </button>
 
-                            {isGenerating && (
-                                <p className="text-sm text-gray-500 mt-4 animate-pulse">
-                                    これには30秒ほどかかる場合があります...
-                                </p>
-                            )}
+                            {isGenerating && <GenerationProgress />}
                         </div>
                     )}
 
@@ -1355,10 +1371,35 @@ function SessionPageInner() {
                                     <span>記事に戻る</span>
                                 </button>
                             </div>
-                            <div className="bg-indigo-50 border-l-4 border-indigo-500 p-4 sm:p-6 rounded mb-6">
-                                <p className="text-base sm:text-lg text-gray-800 font-bold mb-2">Topic: {currentLesson.title}</p>
-                                <p className="text-gray-600">Please answer any of the discussion questions or share your thoughts on the article.</p>
-                            </div>
+                            <details open className="sticky top-[72px] sm:top-24 z-10 bg-indigo-50 border-l-4 border-indigo-500 rounded shadow-md mb-6">
+                                <summary className="cursor-pointer select-none p-3 sm:p-4 text-sm sm:text-base text-gray-800 font-bold">
+                                    Topic: {currentLesson.title}
+                                    <span className="ml-2 text-xs font-normal text-indigo-600">(タップで開閉)</span>
+                                </summary>
+                                <div className="px-3 sm:px-4 pb-3 sm:pb-4 max-h-[35vh] overflow-y-auto space-y-3">
+                                    <p className="text-gray-600 text-sm">Please answer any of the discussion questions or share your thoughts on the article.</p>
+                                    {Array.isArray(currentLesson.discussion_a) && currentLesson.discussion_a.length > 0 && (
+                                        <div>
+                                            <h3 className="font-bold text-indigo-700 text-sm mb-1">Discussion A</h3>
+                                            <ul className="list-disc list-inside space-y-1 text-gray-800 text-sm">
+                                                {currentLesson.discussion_a.map((q, i) => (
+                                                    <li key={i}>{q}</li>
+                                                ))}
+                                            </ul>
+                                        </div>
+                                    )}
+                                    {Array.isArray(currentLesson.discussion_b) && currentLesson.discussion_b.length > 0 && (
+                                        <div>
+                                            <h3 className="font-bold text-indigo-700 text-sm mb-1">Discussion B</h3>
+                                            <ul className="list-disc list-inside space-y-1 text-gray-800 text-sm">
+                                                {currentLesson.discussion_b.map((q, i) => (
+                                                    <li key={i}>{q}</li>
+                                                ))}
+                                            </ul>
+                                        </div>
+                                    )}
+                                </div>
+                            </details>
                             <AudioRecorder
                                 onTranscriptChange={setTranscript}
                                 onDurationChange={setDuration}
