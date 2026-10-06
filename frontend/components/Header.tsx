@@ -38,6 +38,12 @@ export default function Header() {
                                     過去の記事
                                 </Link>
                                 <Link
+                                    href="/feedback"
+                                    className={`text-xs lg:text-sm font-bold transition-colors ${pathname === '/feedback' ? 'text-indigo-600' : 'text-gray-500 hover:text-gray-900'}`}
+                                >
+                                    フィードバック
+                                </Link>
+                                <Link
                                     href="/dashboard"
                                     className={`text-xs lg:text-sm font-bold transition-colors ${pathname === '/dashboard' ? 'text-indigo-600' : 'text-gray-500 hover:text-gray-900'}`}
                                 >
@@ -123,6 +129,13 @@ export default function Header() {
                             className={`px-4 py-3 text-sm font-bold transition-colors border-b border-gray-100 ${pathname === '/lessons' ? 'text-indigo-600 bg-indigo-50' : 'text-gray-700 hover:text-indigo-600 hover:bg-gray-50'}`}
                         >
                             過去の記事
+                        </Link>
+                        <Link
+                            href="/feedback"
+                            onClick={() => setIsMenuOpen(false)}
+                            className={`px-4 py-3 text-sm font-bold transition-colors border-b border-gray-100 ${pathname === '/feedback' ? 'text-indigo-600 bg-indigo-50' : 'text-gray-700 hover:text-indigo-600 hover:bg-gray-50'}`}
+                        >
+                            これまでのフィードバック
                         </Link>
                         <Link
                             href="/dashboard"

@@ -925,10 +925,10 @@ export default function LandingPage() {
           </div>
           <div className="mb-4">
             <Link
-              href="/feedback"
-              className="inline-flex items-center justify-center px-4 py-2 bg-white text-gray-900 hover:bg-gray-100 transition-colors rounded-full text-sm font-semibold"
+              href="/suggestions"
+              className="text-xs text-gray-500 hover:text-gray-300 underline transition-colors"
             >
-              フィードバックを送る
+              開発者へのご意見・ご提案
             </Link>
           </div>
           <p className="text-sm">© 2026 DeepSpeak. All rights reserved.</p>
