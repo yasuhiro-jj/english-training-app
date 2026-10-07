@@ -30,6 +30,9 @@ class StripeService:
         self.subscription_status_property = os.getenv(
             "NOTION_SUBSCRIPTION_STATUS_PROPERTY", "Subscription Status"
         )
+        self.subscription_source_property = os.getenv(
+            "NOTION_SUBSCRIPTION_SOURCE_PROPERTY", "Subscription Source"
+        )
         self._user_db_title_property: Optional[str] = None
 
         if not self.user_db_id:
@@ -61,7 +64,7 @@ class StripeService:
             return None
 
     async def update_user_subscription_in_notion(
-        self, email: str, plan: str, status: str
+        self, email: str, plan: str, status: str, source: Optional[str] = None
     ) -> bool:
         """
         Notionのユーザーデータベースでサブスクリプション情報を更新
@@ -70,6 +73,8 @@ class StripeService:
             email: ユーザーのメールアドレス
             plan: "Basic" | "Premium" | "Free"
             status: "Active" | "Cancelled" | "Expired" | "Trial"
+            source: 購入元 ("Stripe" | "Play")。Stripe から呼ぶ場合は "Stripe" を渡す。
+                Play で有効な購読があるユーザーは、Stripe 側のイベントで上書きしない。
 
         Returns:
             True if successful, False otherwise
@@ -92,6 +97,15 @@ class StripeService:
                     logger.error(f"Failed to create Notion user page for email={email}")
                     return False
 
+            if source == "Stripe":
+                cur_source, cur_status = self._get_billing_state(user_id)
+                if cur_source == "Play" and cur_status == "Active":
+                    logger.warning(
+                        f"Skip Stripe update for {email}: active Google Play subscription exists "
+                        f"(stripe plan={plan}, status={status})"
+                    )
+                    return True
+
             update_props = {
                 self.subscription_plan_property: {"select": {"name": plan}},
                 self.subscription_status_property: {"select": {"name": status}},
@@ -110,6 +124,7 @@ class StripeService:
                     logger.info(
                         f"✅ Updated Notion subscription for {email}: plan={plan}, status=Canceled (fallback)"
                     )
+                    self._set_source(user_id, source)
                     return True
 
                 logger.error(
@@ -124,10 +139,35 @@ class StripeService:
             logger.info(
                 f"✅ Updated Notion subscription for {email}: plan={plan}, status={status}, page_id={user_id}"
             )
+            self._set_source(user_id, source)
             return True
         except Exception as e:
             logger.error(f"Failed to update Notion subscription for {email}: {e}")
             return False
+
+    def _get_billing_state(self, page_id: str) -> Tuple[Optional[str], Optional[str]]:
+        """ユーザーページの (購入元, ステータス) を返す。取得できなければ (None, None)。"""
+        try:
+            page = self.notion_client.pages.retrieve(page_id=page_id)
+            props = (page or {}).get("properties", {})
+            src = ((props.get(self.subscription_source_property) or {}).get("select") or {}).get("name")
+            st = ((props.get(self.subscription_status_property) or {}).get("select") or {}).get("name")
+            return src, st
+        except Exception as e:
+            logger.info(f"Could not read billing state for page {page_id}: {e}")
+            return None, None
+
+    def _set_source(self, page_id: str, source: Optional[str]) -> None:
+        """購入元を記録する（項目が無い等で失敗しても本処理には影響させない）。"""
+        if not source:
+            return
+        try:
+            self.notion_client.pages.update(
+                page_id=page_id,
+                properties={self.subscription_source_property: {"select": {"name": source}}},
+            )
+        except Exception as e:
+            logger.info(f"Could not set subscription source for page {page_id}: {e}")
 
     def _find_user_page_id_by_email(self, email: str) -> Optional[str]:
         """
@@ -284,7 +324,7 @@ class StripeService:
             plan = self._map_price_to_plan(price_id)
 
             return await self.update_user_subscription_in_notion(
-                email=email, plan=plan, status="Active"
+                email=email, plan=plan, status="Active", source="Stripe"
             )
         except Exception as e:
             logger.error(f"Error handling subscription.created: {e}")
@@ -316,7 +356,7 @@ class StripeService:
             notion_status = self._map_stripe_status(stripe_status)
 
             return await self.update_user_subscription_in_notion(
-                email=email, plan=plan, status=notion_status
+                email=email, plan=plan, status=notion_status, source="Stripe"
             )
         except Exception as e:
             logger.error(f"Error handling subscription.updated: {e}")
@@ -337,7 +377,7 @@ class StripeService:
                 return False
 
             return await self.update_user_subscription_in_notion(
-                email=email, plan="Free", status="Cancelled"
+                email=email, plan="Free", status="Cancelled", source="Stripe"
             )
         except Exception as e:
             logger.error(f"Error handling subscription.deleted: {e}")
@@ -379,7 +419,7 @@ class StripeService:
             )
 
             return await self.update_user_subscription_in_notion(
-                email=email, plan=plan, status="Active"
+                email=email, plan=plan, status="Active", source="Stripe"
             )
         except Exception as e:
             logger.error(f"Error handling invoice.payment_succeeded: {e}")
