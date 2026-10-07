@@ -75,5 +75,5 @@ Android アプリ(TWA)内の有料プランは Google Play 課金、Web ブラ�
 ## 既知の制約・要確認
 - Digital Goods API は TWA(Play 経由でインストールされたアプリ)でのみ動く。Web ブラウザ・PWA では使えない(その場合 Android 表示でも「この端末では購入できません」を出す)。
 - API の細部(`subscriptionsv2` の項目名、acknowledge のパス、Billing ライブラリの版)は実機・実環境で確認すること。ここまでのテストはモックによるもの。
-- Stripe と Play の併用: 同一ユーザーが両方で購入した場合、後から届いた更新が前の状態を上書きする。現時点で有料ユーザーはいないため未対応。必要なら `Subscription Source` を見て Stripe 側のハンドラを抑止する。
+- Stripe と Play の併用: Notion の `Subscription Source` に購入元を記録し、Play で有効な購読があるユーザーには、Stripe 側のイベント(更新・解約など)で上書きしない(`stripe_service.py` の `_get_billing_state`)。Play の購読が終了(Cancelled / Expired)していれば、Stripe 側の更新が反映される。二重に購入されること自体は防げないため、画面側(Android は Play のみ、Web は Stripe のみ)で分けている。
 - `GooglePlayService` は Notion 更新のために `StripeService` を内部で利用している(共通サービスへの切り出しは Stripe 側に影響が出るため見送り)。
