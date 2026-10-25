@@ -10,6 +10,7 @@ import {
 } from '@/lib/stripePaymentLinks';
 import { useAndroidApp } from '@/components/AppEnv';
 import { useAuth } from '@/app/lib/auth-context';
+import { api, SubscriptionInfo } from '@/lib/api';
 import {
   PLAY_PRODUCT_IDS,
   PlanKey,
@@ -113,6 +114,22 @@ export function PlanCards() {
   const [message, setMessage] = useState<{ type: 'ok' | 'error'; title?: string; text: string } | null>(null);
   const [stage, setStage] = useState<PurchaseStage | null>(null);
   const { user, loading: authLoading } = useAuth();
+  const [sub, setSub] = useState<SubscriptionInfo | null>(null);
+
+  // 現在のプラン（購入済みか）を取得する。取得できなくても、購入画面自体は使えるようにする
+  useEffect(() => {
+    if (!user) {
+      setSub(null);
+      return;
+    }
+    let cancelled = false;
+    api.getSubscription().then((s) => { if (!cancelled) setSub(s); }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [user]);
+
+  const activePlan: 'basic' | 'premium' | null =
+    sub && sub.status === 'active' && (sub.plan === 'basic' || sub.plan === 'premium') ? sub.plan : null;
+  const activePlanLabel = activePlan === 'premium' ? 'Premium' : 'Basic';
 
   useEffect(() => {
     if (playSupported) fetchLocalizedPrices().then(setPrices);
@@ -193,6 +210,27 @@ export function PlanCards() {
 
   return (
     <div>
+    {activePlan && (
+      <div role="status" className="mb-4 rounded-lg border-2 border-emerald-400 bg-emerald-50 p-4 text-sm text-emerald-900">
+        <p className="text-base font-bold">現在のプラン: {activePlanLabel}(有効)</p>
+        {mode === 'android' ? (
+          <p className="mt-1">
+            Google Play の定期購入で管理されています。プランの変更・解約は、Google Play の「定期購入」から行えます。
+            二重に購入しないよう、購入ボタンは無効にしています。
+          </p>
+        ) : (
+          <p className="mt-1">ご利用中のプランです。</p>
+        )}
+        {mode === 'android' && (
+          <a
+            href="https://play.google.com/store/account/subscriptions"
+            className="mt-2 inline-block font-bold text-indigo-700 underline"
+          >
+            Google Play の定期購入を開く
+          </a>
+        )}
+      </div>
+    )}
     {mode === 'android' && !authLoading && !user && (
       <div role="alert" className="mb-4 rounded-lg border-2 border-amber-400 bg-amber-50 p-4 text-sm text-amber-900">
         <p className="font-bold">購入にはログインが必要です</p>
@@ -248,14 +286,25 @@ export function PlanCards() {
 
             <p className="text-sm text-gray-600 mb-4">{p.description}</p>
 
-            {mode === 'android' ? (
+            {activePlan && p.planName.toLowerCase() === activePlan ? (
+              <div
+                aria-disabled="true"
+                className="block w-full px-6 py-3 text-center font-bold rounded-lg border-2 border-emerald-500 bg-emerald-50 text-emerald-700"
+              >
+                ✓ 現在のプラン
+              </div>
+            ) : mode === 'android' ? (
               <button
                 type="button"
-                disabled={busyKey !== null}
+                disabled={busyKey !== null || activePlan !== null}
                 onClick={() => buy(p.key as PlanKey)}
                 className={`block w-full px-6 py-3 text-white font-bold rounded-lg transition-colors text-center disabled:opacity-60 ${t.button}`}
               >
-                {busyKey === p.key ? '処理中...' : `${p.planName} ${p.billing}プランを購入`}
+                {busyKey === p.key
+                  ? '処理中...'
+                  : activePlan
+                    ? 'Google Play で変更'
+                    : `${p.planName} ${p.billing}プランを購入`}
               </button>
             ) : (
               <a

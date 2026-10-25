@@ -113,7 +113,22 @@ export class ApiError extends Error {
     }
 }
 
+export interface SubscriptionInfo {
+    plan: string;      // free | basic | premium
+    status: string;    // trial | active | expired | cancelled
+    is_trial: boolean;
+    trial_ends_at: string | null;
+}
+
 export const api = {
+    async getSubscription(): Promise<SubscriptionInfo> {
+        const response = await authenticatedFetch(`${API_URL}/api/subscription/me`);
+        if (!response.ok) {
+            throw new ApiError('プラン情報の取得に失敗しました', response.status);
+        }
+        return response.json();
+    },
+
     async verifyPlayPurchase(productId: string, purchaseToken: string): Promise<{ plan: string; status: string }> {
         let response: Response;
         try {
