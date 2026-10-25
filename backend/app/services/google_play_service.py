@@ -76,25 +76,99 @@ class GooglePlayService:
     def is_configured(self) -> bool:
         return bool(os.getenv("GOOGLE_PLAY_SERVICE_ACCOUNT_JSON"))
 
+    @staticmethod
+    def parse_service_account(raw: str) -> dict:
+        """
+        環境変数の値から、サービスアカウントの鍵(JSON)を取り出す。
+        JSONそのもの、または base64 化したJSONを受け付ける。BOM・前後の空白/引用符・改行は許容する。
+        形式が違うときは、値そのものは含めず、原因だけを示す PlayPurchaseError(503) を投げる。
+        """
+        text = (raw or "").replace("﻿", "").strip()
+        if len(text) >= 2 and text[0] == text[-1] and text[0] in "\"'":
+            text = text[1:-1].strip()
+        if not text:
+            raise PlayPurchaseError("GOOGLE_PLAY_SERVICE_ACCOUNT_JSON is empty", 503)
+
+        if not text.startswith("{"):
+            compact = "".join(text.split())  # 貼り付け時の改行・空白を除く
+            try:
+                decoded = base64.b64decode(compact, validate=True)
+            except Exception:
+                raise PlayPurchaseError(
+                    "GOOGLE_PLAY_SERVICE_ACCOUNT_JSON is neither JSON nor valid base64 "
+                    f"(length={len(compact)}). Re-set it with the base64 of the key file.",
+                    503,
+                )
+            text = None
+            for enc in ("utf-8-sig", "utf-16"):
+                try:
+                    candidate = decoded.decode(enc)
+                except UnicodeDecodeError:
+                    continue
+                if candidate.lstrip().startswith("{"):
+                    text = candidate
+                    break
+            if text is None:
+                raise PlayPurchaseError(
+                    "GOOGLE_PLAY_SERVICE_ACCOUNT_JSON decodes to something that is not a JSON key file "
+                    f"(length={len(compact)}). It may be a different value pasted by mistake.",
+                    503,
+                )
+
+        try:
+            info = json.loads(text)
+        except ValueError:
+            raise PlayPurchaseError("GOOGLE_PLAY_SERVICE_ACCOUNT_JSON is not valid JSON", 503)
+        missing = [k for k in ("type", "client_email", "private_key") if not (isinstance(info, dict) and info.get(k))]
+        if missing or info.get("type") != "service_account":
+            raise PlayPurchaseError(
+                "GOOGLE_PLAY_SERVICE_ACCOUNT_JSON is not a service account key "
+                f"(missing/invalid: {', '.join(missing) or 'type'})",
+                503,
+            )
+        return info
+
+    def credentials_status(self) -> Tuple[bool, str]:
+        """鍵が読み込めるかを、通信せずに調べる（値は返さない）。/health 用。"""
+        raw = os.getenv("GOOGLE_PLAY_SERVICE_ACCOUNT_JSON", "")
+        if not raw.strip():
+            return False, "not set"
+        try:
+            info = self.parse_service_account(raw)
+            service_account.Credentials.from_service_account_info(info, scopes=[ANDROID_PUBLISHER_SCOPE])
+        except PlayPurchaseError as e:
+            return False, str(e)
+        except Exception as e:  # 鍵の中身が壊れている等
+            return False, f"invalid key: {type(e).__name__}"
+        return True, "ok"
+
     def _load_credentials(self) -> service_account.Credentials:
         if self._credentials is not None:
             return self._credentials
-        raw = os.getenv("GOOGLE_PLAY_SERVICE_ACCOUNT_JSON", "").strip()
-        if not raw:
+        raw = os.getenv("GOOGLE_PLAY_SERVICE_ACCOUNT_JSON", "")
+        if not raw.strip():
             raise PlayPurchaseError("Google Play is not configured", 503)
-        # JSONそのもの、または base64 化した JSON のどちらも受け付ける
-        if not raw.startswith("{"):
-            raw = base64.b64decode(raw).decode("utf-8")
-        info = json.loads(raw)
-        self._credentials = service_account.Credentials.from_service_account_info(
-            info, scopes=[ANDROID_PUBLISHER_SCOPE]
-        )
+        info = self.parse_service_account(raw)
+        try:
+            self._credentials = service_account.Credentials.from_service_account_info(
+                info, scopes=[ANDROID_PUBLISHER_SCOPE]
+            )
+        except Exception as e:
+            raise PlayPurchaseError(f"Service account key could not be loaded: {type(e).__name__}", 503)
         return self._credentials
 
     def _get_access_token_sync(self) -> str:
         creds = self._load_credentials()
         if not creds.valid:
-            creds.refresh(GoogleAuthRequest())
+            try:
+                creds.refresh(GoogleAuthRequest())
+            except Exception as e:
+                logger.error("Google auth refresh failed: %s: %s", type(e).__name__, e)
+                raise PlayPurchaseError(
+                    f"Google authentication failed ({type(e).__name__}). "
+                    "Check the service account key and the Play Console API access.",
+                    502,
+                )
         return creds.token
 
     async def _access_token(self) -> str:

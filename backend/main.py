@@ -48,6 +48,15 @@ async def root():
         "message": "English Conversation Training API is running"
     }
 
+def _play_credentials_ok() -> bool:
+    """Google Play のサービスアカウント鍵が読み込めるか（鍵の値は返さない）"""
+    try:
+        from app.routes.play_billing import play_service
+        return play_service.credentials_status()[0]
+    except Exception:
+        return False
+
+
 @app.get("/health")
 async def health_check():
     """
@@ -66,6 +75,7 @@ async def health_check():
         "stripe_secret_configured": bool(os.getenv("STRIPE_SECRET_KEY")),
         "stripe_webhook_secret_configured": bool(os.getenv("STRIPE_WEBHOOK_SECRET")),
         "google_play_configured": bool(os.getenv("GOOGLE_PLAY_SERVICE_ACCOUNT_JSON")),
+        "google_play_credentials_ok": _play_credentials_ok(),
         "google_play_rtdn_secret_configured": bool(os.getenv("GOOGLE_PLAY_RTDN_SECRET")),
     }
 
