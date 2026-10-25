@@ -77,3 +77,10 @@ Android アプリ(TWA)内の有料プランは Google Play 課金、Web ブラ�
 - API の細部(`subscriptionsv2` の項目名、acknowledge のパス、Billing ライブラリの版)は実機・実環境で確認すること。ここまでのテストはモックによるもの。
 - Stripe と Play の併用: Notion の `Subscription Source` に購入元を記録し、Play で有効な購読があるユーザーには、Stripe 側のイベント(更新・解約など)で上書きしない(`stripe_service.py` の `_get_billing_state`)。Play の購読が終了(Cancelled / Expired)していれば、Stripe 側の更新が反映される。二重に購入されること自体は防げないため、画面側(Android は Play のみ、Web は Stripe のみ)で分けている。
 - `GooglePlayService` は Notion 更新のために `StripeService` を内部で利用している(共通サービスへの切り出しは Stripe 側に影響が出るため見送り)。
+
+## 購入確認の信頼性向上（実機テストで判明）
+実機の内部テストで、購入自体はGoogle側で成立したが、サーバーでの確認(`/api/play/verify`)が行われず、承認されないまま取り消された。これを受けて次を追加した。
+- **ログイン確認**: 未ログインのまま購入画面を開かない（`PlanCards.tsx`）。ログイン案内を表示する。
+- **未確認の購入を端末に保存し、自動で再送**: 購入トークンを確認成功まで localStorage に保持し、アプリ起動・ログイン時に再送する（`playBilling.ts` の `recoverPurchases`、`PlayBillingRecovery.tsx`）。永続エラー(400/409)なら破棄、通信・認証エラー(0/401/5xx)なら保持。承認の猶予(3日)で破棄。
+- **入口ログ**: `/api/play/verify` の受信・失敗(ステータスと理由)・成功を必ずログに出す。購入トークンは先頭のみ。
+- **エラー表示**: 「購入の準備」「購入画面の表示」「購入情報の取得」「サーバーでの購入確認」のどの段階で止まったかを、目立つ枠で表示する。購入情報が取れなかった場合は、受け取った項目名も表示する。

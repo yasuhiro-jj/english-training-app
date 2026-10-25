@@ -21,23 +21,51 @@ class PlayVerifyRequest(BaseModel):
     purchase_token: str = Field(..., min_length=1, max_length=2000)
 
 
+def _mask(value: str) -> str:
+    """ログ用に、購入トークンの先頭だけを残して伏せる"""
+    return f"{value[:6]}…(len={len(value)})" if value else "(empty)"
+
+
 @router.post("/api/play/verify")
 async def verify_play_purchase(
     body: PlayVerifyRequest, current_user: dict = Depends(get_current_user)
 ):
     """
     アプリ(TWA)で購入した定期購入を検証し、ログイン中ユーザーのサブスクに反映する。
+
+    届いたかどうか・なぜ失敗したかを後から追えるよう、受信・結果を必ずログに残す
+    （購入トークンは先頭のみ）。
     """
+    email = current_user["email"]
+    logger.warning(
+        "play/verify received: email=%s product=%s token=%s",
+        email, body.product_id, _mask(body.purchase_token),
+    )
     if not play_service.is_configured():
+        logger.error("play/verify rejected: Google Play billing is not configured (503)")
         raise HTTPException(status_code=503, detail="Google Play billing is not configured")
     try:
         result = await play_service.verify_and_apply(
-            email=current_user["email"],
+            email=email,
             product_id=body.product_id,
             purchase_token=body.purchase_token,
         )
     except PlayPurchaseError as e:
+        logger.warning(
+            "play/verify failed: email=%s product=%s token=%s status=%s reason=%s",
+            email, body.product_id, _mask(body.purchase_token), e.status_code, e,
+        )
         raise HTTPException(status_code=e.status_code, detail=str(e))
+    except Exception:
+        logger.exception(
+            "play/verify unexpected error: email=%s product=%s token=%s",
+            email, body.product_id, _mask(body.purchase_token),
+        )
+        raise HTTPException(status_code=500, detail="Internal error while verifying the purchase")
+    logger.warning(
+        "play/verify succeeded: email=%s product=%s plan=%s status=%s",
+        email, body.product_id, result.get("plan"), result.get("status"),
+    )
     return {"status": "success", **result}
 
 
@@ -69,7 +97,7 @@ async def play_rtdn(request: Request):
     sub_note = notification.get("subscriptionNotification")
     if not sub_note:
         # testNotification / oneTimeProduct など
-        logger.info(f"RTDN without subscription payload: keys={list(notification.keys())}")
+        logger.warning("RTDN without subscription payload: keys=%s", list(notification.keys()))
         return {"status": "ignored"}
 
     try:

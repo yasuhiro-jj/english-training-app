@@ -176,3 +176,48 @@ def test_rtdn_ignores_other_package_and_garbage(monkeypatch):
     assert c.post("/api/webhooks/play?token=rtdn-secret", json=rtdn_body(pkg="other.app")).json()["status"] == "ignored"
     assert c.post("/api/webhooks/play?token=rtdn-secret", json={"foo": 1}).json()["status"] == "ignored"
     h.assert_not_awaited()
+
+
+# ---------- /api/play/verify の入口ログ（届いたか・なぜ失敗したかを追える） ----------
+
+import logging  # noqa: E402
+
+
+def _client_with_user(monkeypatch):
+    app = FastAPI()
+    app.include_router(pb.router)
+    app.dependency_overrides[get_current_user] = lambda: {"email": "a@example.com"}
+    return TestClient(app)
+
+
+def test_verify_logs_received_and_failure(monkeypatch, caplog):
+    monkeypatch.setattr(pb.play_service, "verify_and_apply",
+                        AsyncMock(side_effect=PlayPurchaseError("Purchase already linked", 409)))
+    c = _client_with_user(monkeypatch)
+    with caplog.at_level(logging.WARNING):
+        r = c.post("/api/play/verify", json={"product_id": "deepspeak_basic_monthly", "purchase_token": "abcdef123456"})
+    assert r.status_code == 409
+    text = caplog.text
+    assert "play/verify received" in text and "a@example.com" in text
+    assert "play/verify failed" in text and "status=409" in text
+    assert "abcdef123456" not in text  # トークン全体はログに出さない
+    assert "abcdef" in text
+
+
+def test_verify_logs_success(monkeypatch, caplog):
+    monkeypatch.setattr(pb.play_service, "verify_and_apply",
+                        AsyncMock(return_value={"plan": "Basic", "status": "Active"}))
+    c = _client_with_user(monkeypatch)
+    with caplog.at_level(logging.WARNING):
+        r = c.post("/api/play/verify", json={"product_id": "deepspeak_basic_monthly", "purchase_token": "tok-123456789"})
+    assert r.status_code == 200 and r.json()["plan"] == "Basic"
+    assert "play/verify succeeded" in caplog.text
+
+
+def test_verify_unexpected_error_is_logged_and_500(monkeypatch, caplog):
+    monkeypatch.setattr(pb.play_service, "verify_and_apply", AsyncMock(side_effect=RuntimeError("boom")))
+    c = _client_with_user(monkeypatch)
+    with caplog.at_level(logging.WARNING):
+        r = c.post("/api/play/verify", json={"product_id": "deepspeak_basic_monthly", "purchase_token": "tok-123456789"})
+    assert r.status_code == 500
+    assert "play/verify unexpected error" in caplog.text
