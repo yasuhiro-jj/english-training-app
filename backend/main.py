@@ -6,7 +6,7 @@ import os
 # Load environment variables FIRST
 load_dotenv()
 
-from app.routes import session_router, auth_router, chat_router, dashboard_router, lesson_router, tts_router, stripe_webhook_router, feedback_router, play_billing_router
+from app.routes import session_router, auth_router, chat_router, dashboard_router, lesson_router, tts_router, stripe_webhook_router, feedback_router, play_billing_router, subscription_router
 from app.routes import whisper as whisper_router
 
 
@@ -38,6 +38,7 @@ app.include_router(tts_router)
 app.include_router(stripe_webhook_router)
 app.include_router(feedback_router)
 app.include_router(play_billing_router)
+app.include_router(subscription_router)
 app.include_router(whisper_router.router)
 
 @app.get("/")
