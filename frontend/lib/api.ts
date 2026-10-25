@@ -103,15 +103,31 @@ const authenticatedFetch = async (url: string, options: RequestInit = {}) => {
     return response;
 };
 
+/** HTTPステータス付きのエラー。status=0 は通信自体の失敗（オフライン等） */
+export class ApiError extends Error {
+    status: number;
+    constructor(message: string, status: number) {
+        super(message);
+        this.name = 'ApiError';
+        this.status = status;
+    }
+}
+
 export const api = {
     async verifyPlayPurchase(productId: string, purchaseToken: string): Promise<{ plan: string; status: string }> {
-        const response = await authenticatedFetch(`${API_URL}/api/play/verify`, {
-            method: 'POST',
-            body: JSON.stringify({ product_id: productId, purchase_token: purchaseToken }),
-        });
+        let response: Response;
+        try {
+            response = await authenticatedFetch(`${API_URL}/api/play/verify`, {
+                method: 'POST',
+                body: JSON.stringify({ product_id: productId, purchase_token: purchaseToken }),
+            });
+        } catch (e) {
+            throw new ApiError(`サーバーに接続できませんでした（${e instanceof Error ? e.message : '通信エラー'}）`, 0);
+        }
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
-            throw new Error(errorData.detail || '購入の確認に失敗しました');
+            const detail = typeof errorData.detail === 'string' ? errorData.detail : '';
+            throw new ApiError(detail || '購入の確認に失敗しました', response.status);
         }
         return response.json();
     },

@@ -5,6 +5,7 @@ import { AuthProvider } from "./lib/auth-context";
 import Header from "../components/Header";
 import UsageLimitBanner from "../components/UsageLimitBanner";
 import ServiceWorkerRegister from "../components/ServiceWorkerRegister";
+import { PlayBillingRecovery } from "../components/PlayBillingRecovery";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -52,6 +53,7 @@ export default function RootLayout({
       >
         <ServiceWorkerRegister />
         <AuthProvider>
+          <PlayBillingRecovery />
           <Header />
           <UsageLimitBanner />
           {children}

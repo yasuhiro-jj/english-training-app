@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import {
   stripePaymentLinkBasicMonthly,
   stripePaymentLinkBasicYearly,
@@ -8,10 +9,14 @@ import {
   stripePaymentLinkPremiumYearly,
 } from '@/lib/stripePaymentLinks';
 import { useAndroidApp } from '@/components/AppEnv';
+import { useAuth } from '@/app/lib/auth-context';
 import {
   PLAY_PRODUCT_IDS,
   PlanKey,
   PlayPurchaseCancelled,
+  PlayPurchaseError,
+  PurchaseStage,
+  STAGE_LABELS,
   fetchLocalizedPrices,
   isPlayBillingSupported,
   purchasePlan,
@@ -105,7 +110,9 @@ export function PlanCards() {
   const playSupported = mode === 'android' && isPlayBillingSupported();
   const [prices, setPrices] = useState<Record<string, string>>({});
   const [busyKey, setBusyKey] = useState<string | null>(null);
-  const [message, setMessage] = useState<{ type: 'ok' | 'error'; text: string } | null>(null);
+  const [message, setMessage] = useState<{ type: 'ok' | 'error'; title?: string; text: string } | null>(null);
+  const [stage, setStage] = useState<PurchaseStage | null>(null);
+  const { user, loading: authLoading } = useAuth();
 
   useEffect(() => {
     if (playSupported) fetchLocalizedPrices().then(setPrices);
@@ -113,21 +120,49 @@ export function PlanCards() {
 
   const buy = async (key: PlanKey) => {
     setMessage(null);
+    if (!user) {
+      setMessage({
+        type: 'error',
+        title: 'ログインが必要です',
+        text: '購入の前に、ログインしてください。ログインしていない状態で購入すると、プランを反映できません。',
+      });
+      return;
+    }
     setBusyKey(key);
+    setStage('preparing');
     try {
-      const result = await purchasePlan(key);
+      const result = await purchasePlan(key, setStage);
       setMessage({ type: 'ok', text: `${result.plan} プランが有効になりました。` });
       setTimeout(() => window.location.reload(), 1500);
     } catch (e) {
       if (e instanceof PlayPurchaseCancelled) return;
-      setMessage({ type: 'error', text: e instanceof Error ? e.message : '購入に失敗しました' });
+      if (e instanceof PlayPurchaseError) {
+        setMessage({
+          type: 'error',
+          title: `${STAGE_LABELS[e.stage]}で失敗しました`,
+          text: e.pendingRetry
+            ? `購入は完了していますが、サーバーでの確認に失敗しました（${e.message}）。この端末に購入情報を保存してあり、次にアプリを開いたとき、またはログインしたときに自動で再確認します。すぐに反映したい場合は、ログインしたうえで「購入を復元する」を押してください。`
+            : e.message,
+        });
+      } else {
+        setMessage({
+          type: 'error',
+          title: '購入に失敗しました',
+          text: e instanceof Error ? e.message : '不明なエラー',
+        });
+      }
     } finally {
       setBusyKey(null);
+      setStage(null);
     }
   };
 
   const restore = async () => {
     setMessage(null);
+    if (!user) {
+      setMessage({ type: 'error', title: 'ログインが必要です', text: 'ログインしてから、もう一度押してください。' });
+      return;
+    }
     setBusyKey('restore');
     try {
       const n = await restorePurchases();
@@ -158,9 +193,23 @@ export function PlanCards() {
 
   return (
     <div>
+    {mode === 'android' && !authLoading && !user && (
+      <div role="alert" className="mb-4 rounded-lg border-2 border-amber-400 bg-amber-50 p-4 text-sm text-amber-900">
+        <p className="font-bold">購入にはログインが必要です</p>
+        <p className="mt-1">ログインしてから、プランを選んでください。</p>
+        <Link href="/login" className="mt-2 inline-block font-bold text-indigo-700 underline">
+          ログインする
+        </Link>
+      </div>
+    )}
     {mode === 'android' && (
       <p className="mb-4 text-xs text-gray-600">
         定期購入は自動更新されます。解約は Google Play の「定期購入」からいつでも行えます。
+      </p>
+    )}
+    {stage && (
+      <p role="status" className="mb-4 rounded-lg bg-indigo-50 p-3 text-center text-sm font-semibold text-indigo-800">
+        処理中: {STAGE_LABELS[stage]}…（画面を閉じずにお待ちください）
       </p>
     )}
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -235,14 +284,17 @@ export function PlanCards() {
       </div>
     )}
     {message && (
-      <p
-        role="status"
-        className={`mt-4 text-sm text-center font-semibold ${
-          message.type === 'ok' ? 'text-emerald-700' : 'text-red-600'
+      <div
+        role={message.type === 'error' ? 'alert' : 'status'}
+        className={`mt-4 rounded-lg border-2 p-4 text-sm ${
+          message.type === 'ok'
+            ? 'border-emerald-400 bg-emerald-50 text-emerald-900'
+            : 'border-red-400 bg-red-50 text-red-900'
         }`}
       >
-        {message.text}
-      </p>
+        {message.title && <p className="font-bold">{message.title}</p>}
+        <p className={message.title ? 'mt-1' : 'font-semibold'}>{message.text}</p>
+      </div>
     )}
     </div>
   );
