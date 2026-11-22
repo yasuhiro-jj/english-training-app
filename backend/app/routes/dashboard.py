@@ -28,25 +28,12 @@ async def get_dashboard_stats(user: dict = Depends(get_current_user)):
             "plan": subscription.get("plan", "free")
         }
         
-        # 1日の使用量を取得（無料体験の場合）
-        usage_info = {}
-        if subscription.get("is_trial"):
-            daily_lessons = await usage_service.get_daily_lesson_count(email)
-            daily_ai_messages = await usage_service.get_daily_ai_messages_count(email)
-            usage_info = {
-                "daily_lessons": daily_lessons,
-                "daily_ai_messages": daily_ai_messages,
-                # 無料体験中（7日間）はフル機能・無制限のため、残り回数は None（無制限）
-                "remaining_lessons": None,
-                "remaining_ai_messages": None
-            }
-        
         return {
             "summary": stats,
             "mistake_trends": mistakes,
             "recent_feedback": recent_feedback,
             "subscription": trial_info,
-            "usage": usage_info
+            "usage": {}
         }
     except Exception as e:
         logger.error(f"Failed to load dashboard stats for {email}: {e}")

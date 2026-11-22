@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException, Depends
 from app.models.schemas import LessonGenerateRequest, LessonGenerateResponse, LessonOption
 from app.services import AIService, NewsService, NotionService
+from app.services.usage_service import UsageService
 from app.deps import get_current_user
 import logging
 from typing import List, Dict
@@ -11,6 +12,14 @@ router = APIRouter(prefix="/api/lesson", tags=["lesson"])
 ai_service = AIService()
 news_service = NewsService()
 notion_service = NotionService()
+usage_service = UsageService()
+
+
+async def require_access(user: dict):
+    """体験期間(7日間)が終わり、有料プランもない場合は、AI機能を使えない。"""
+    access = await usage_service.check_access(user.get("email", ""))
+    if not access["allowed"]:
+        raise HTTPException(status_code=403, detail=access["reason"])
 
 logger = logging.getLogger(__name__)
 
@@ -27,6 +36,7 @@ async def generate_lesson(
     指定された記事URLからスクレイピングし、
     OpenAI APIで英語レッスンを生成します。
     """
+    await require_access(user)
     try:
         # 1. 記事をスクレイピング
         logger.info(f"記事をスクレイピング開始: {request.news_url}")
@@ -108,6 +118,7 @@ async def generate_lesson_auto(user: dict = Depends(get_current_user), level: in
     複数のニュースソースから自動的に記事を取得し、
     OpenAI APIで英語レッスンを生成します。
     """
+    await require_access(user)
     try:
         # 1. 複数のニュースソースから自動で記事を取得
         logger.info("自動ニュース取得開始")

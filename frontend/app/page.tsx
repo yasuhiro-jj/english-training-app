@@ -822,7 +822,7 @@ export default function LandingPage() {
                   </div>
                   <Link href="/dashboard">
                     <button className="w-full px-6 py-3 bg-green-500 hover:bg-green-600 text-white font-bold rounded-full transition-colors">
-                      無料で続ける
+                      ダッシュボードへ
                     </button>
                   </Link>
                 </div>

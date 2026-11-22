@@ -20,8 +20,8 @@ async def transcribe_audio(
 ):
     """
     音声をWhisper APIで文字起こし
-    - 無料体験（7日間）: 無制限（フル機能）
-    - 有料プラン: 無制限
+    - 登録後7日間の体験期間・有料プラン: 無制限
+    - 体験終了後で有料プランなし: 使用不可
     """
     user_email = user.get("email")
     
@@ -57,8 +57,9 @@ async def transcribe_audio(
         # 4. 使用量を記録
         await usage_service.add_whisper_usage(user_email, result["usage_minutes"])
         
-        # 5. 残り分数: 無料体験・有料プランとも無制限のため None のまま
-        
+        # 5. 体験期間中・有料プランともに、音声認識の時間制限はなし
+        result["remaining_minutes"] = None
+
         # 6. レスポンス返却
         return WhisperTranscribeResponse(
             transcript=result["transcript"],

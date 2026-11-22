@@ -1,10 +1,11 @@
 import os
 import bcrypt
 import jwt
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional, Dict
 from notion_client import Client
 from dotenv import load_dotenv
+from app.services.usage_service import TRIAL_DAYS
 
 load_dotenv()
 
@@ -94,7 +95,7 @@ class AuthService:
                         "select": {"name": "Trial"}
                     },
                     "Trial Ends At": {
-                        "date": {"start": (datetime.now() + timedelta(days=7)).isoformat()}
+                        "date": {"start": (datetime.now(timezone.utc) + timedelta(days=TRIAL_DAYS)).isoformat()}
                     }
                 }
             )

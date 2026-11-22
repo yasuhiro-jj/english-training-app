@@ -2,113 +2,96 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { AlertTriangle } from 'lucide-react';
-import { api } from '../lib/api';
+import { api, SubscriptionInfo } from '../lib/api';
 
-interface UsageInfo {
-    daily_lessons: number;
-    daily_ai_messages: number;
-    remaining_lessons: number | null;
-    remaining_ai_messages: number | null;
+const HIDDEN_PATHS = ['/', '/login', '/signup', '/plans'];
+const WARN_WITHIN_DAYS = 3;
+
+function daysLeft(endsAt: string | null): number | null {
+    if (!endsAt) return null;
+    const ms = new Date(endsAt).getTime() - Date.now();
+    if (Number.isNaN(ms)) return null;
+    return Math.max(0, Math.ceil(ms / (1000 * 60 * 60 * 24)));
 }
 
 export default function UsageLimitBanner() {
-    const [usageInfo, setUsageInfo] = useState<UsageInfo | null>(null);
-    const [isLoading, setIsLoading] = useState(true);
+    const pathname = usePathname();
+    const [sub, setSub] = useState<SubscriptionInfo | null>(null);
 
     useEffect(() => {
-        const fetchUsage = async () => {
-            try {
-                const stats = await api.getDashboardStats();
-                if (stats.subscription?.is_trial && stats.usage) {
-                    setUsageInfo(stats.usage);
-                }
-            } catch (error) {
-                console.error('Failed to fetch usage info:', error);
-            } finally {
-                setIsLoading(false);
-            }
+        if (HIDDEN_PATHS.includes(pathname || '')) return;
+        let token: string | null = null;
+        try {
+            token = localStorage.getItem('auth_token');
+        } catch {
+            // localStorageが使えない環境では何も表示しない
+        }
+        if (!token) return;
+
+        let cancelled = false;
+        api.getSubscription()
+            .then((info) => {
+                if (!cancelled) setSub(info);
+            })
+            .catch(() => {
+                // お知らせは補助的な表示のため、取得に失敗しても何もしない
+            });
+        return () => {
+            cancelled = true;
         };
+    }, [pathname]);
 
-        fetchUsage();
-    }, []);
+    if (!sub || HIDDEN_PATHS.includes(pathname || '')) return null;
 
-    if (isLoading || !usageInfo) {
-        return null;
-    }
+    const expired = sub.status === 'expired';
+    const remaining = sub.is_trial ? daysLeft(sub.trial_ends_at) : null;
+    const showTrialWarning = remaining !== null && remaining <= WARN_WITHIN_DAYS;
 
-    // 警告を表示する条件: 残りが少ない場合（レッスン: 残り0、AIコーチング: 残り3以下）
-    const shouldShowLessonWarning = usageInfo.remaining_lessons === 0;
-    const shouldShowAIChatWarning = usageInfo.remaining_ai_messages !== null && usageInfo.remaining_ai_messages <= 3 && usageInfo.remaining_ai_messages > 0;
-    const shouldShowAIChatLimit = usageInfo.remaining_ai_messages === 0;
-
-    if (!shouldShowLessonWarning && !shouldShowAIChatWarning && !shouldShowAIChatLimit) {
-        return null;
-    }
+    // ダッシュボードには、体験終了の案内が専用に表示されるため、ここでは重ねて出さない
+    if (expired && pathname === '/dashboard') return null;
+    if (!expired && !showTrialWarning) return null;
 
     return (
         <div className="fixed top-20 left-0 right-0 z-40 px-4 sm:px-6 lg:px-8">
             <div className="max-w-7xl mx-auto">
-                {shouldShowLessonWarning && (
-                    <div className="mb-2 bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-r-lg shadow-lg">
-                        <div className="flex items-start">
-                            <AlertTriangle className="w-5 h-5 text-yellow-600 mt-0.5 mr-3 flex-shrink-0" />
-                            <div className="flex-1">
-                                <p className="text-sm font-semibold text-yellow-800">
-                                    本日のレッスン制限に達しました
-                                </p>
-                                <p className="text-sm text-yellow-700 mt-1">
-                                    本日のレッスン回数の上限に達しました。
-                                </p>
-                                <Link
-                                    href="/plans"
-                                    className="inline-block mt-2 text-sm font-bold text-yellow-800 hover:text-yellow-900 underline"
-                                >
-                                    有料プランで無制限に利用する →
-                                </Link>
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                {shouldShowAIChatLimit && (
+                {expired ? (
                     <div className="mb-2 bg-red-50 border-l-4 border-red-400 p-4 rounded-r-lg shadow-lg">
                         <div className="flex items-start">
                             <AlertTriangle className="w-5 h-5 text-red-600 mt-0.5 mr-3 flex-shrink-0" />
                             <div className="flex-1">
                                 <p className="text-sm font-semibold text-red-800">
-                                    本日のAIコーチング制限に達しました
+                                    7日間の無料体験が終了しました
                                 </p>
                                 <p className="text-sm text-red-700 mt-1">
-                                    本日のAIコーチング回数の上限に達しました。
+                                    レッスン・AIコーチング・音声認識などをご利用いただくには、プランをお選びください。過去の記事やフィードバックは、これまでどおり見返せます。
                                 </p>
                                 <Link
                                     href="/plans"
                                     className="inline-block mt-2 text-sm font-bold text-red-800 hover:text-red-900 underline"
                                 >
-                                    有料プランで無制限に利用する →
+                                    プランを選ぶ →
                                 </Link>
                             </div>
                         </div>
                     </div>
-                )}
-
-                {shouldShowAIChatWarning && (
+                ) : (
                     <div className="mb-2 bg-orange-50 border-l-4 border-orange-400 p-4 rounded-r-lg shadow-lg">
                         <div className="flex items-start">
                             <AlertTriangle className="w-5 h-5 text-orange-600 mt-0.5 mr-3 flex-shrink-0" />
                             <div className="flex-1">
                                 <p className="text-sm font-semibold text-orange-800">
-                                    AIコーチングの残りメッセージが少なくなっています
+                                    {remaining === 0 ? '無料体験は本日で終了します' : `無料体験は、あと${remaining}日です`}
                                 </p>
                                 <p className="text-sm text-orange-700 mt-1">
-                                    残り {usageInfo.remaining_ai_messages} メッセージ
+                                    体験が終わると、レッスン・AIコーチング・音声認識などはプランの契約が必要になります。
                                 </p>
                                 <Link
                                     href="/plans"
                                     className="inline-block mt-2 text-sm font-bold text-orange-800 hover:text-orange-900 underline"
                                 >
-                                    有料プランで無制限に利用する →
+                                    プランを見る →
                                 </Link>
                             </div>
                         </div>

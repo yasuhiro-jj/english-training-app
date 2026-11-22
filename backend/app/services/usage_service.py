@@ -1,10 +1,46 @@
 from notion_client import Client
 import os
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Dict, Optional
 import logging
 
 logger = logging.getLogger(__name__)
+
+# 無料プランはなし。登録後7日間はフル機能、その後は有料プランが必須。
+TRIAL_DAYS = 7
+
+# 体験の終了日が未設定の既存ユーザーは、この日(またはそのユーザーの登録日の遅い方)から7日間を体験期間とする
+TRIAL_ENFORCEMENT_START = datetime.fromisoformat(
+    os.getenv("TRIAL_ENFORCEMENT_START", "2026-11-22T00:00:00+00:00")
+)
+
+ACCESS_EXPIRED_MESSAGE = "7日間の無料体験が終了しました。引き続きご利用いただくには、プランをお選びください。自動課金は一切発生しません。"
+
+PAID_PLANS = ("basic", "premium")
+
+# 運営者・関係者のアカウントなど、体験期間や契約に関係なくいつでも使えるメールアドレス(カンマ区切り)。
+# Railwayの環境変数 UNLIMITED_ACCESS_EMAILS で設定する(コードに個人のアドレスは書かない)
+UNLIMITED_ACCESS_ENV = "UNLIMITED_ACCESS_EMAILS"
+
+
+def is_unlimited_account(email: Optional[str]) -> bool:
+    if not email:
+        return False
+    allowed = {e.strip().lower() for e in os.getenv(UNLIMITED_ACCESS_ENV, "").split(",") if e.strip()}
+    return email.strip().lower() in allowed
+
+
+def parse_notion_datetime(value: Optional[str]) -> Optional[datetime]:
+    """Notionの日付文字列を、タイムゾーン付き(UTC)のdatetimeに変換する。"""
+    if not value:
+        return None
+    try:
+        dt = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt
 
 
 class UsageService:
@@ -18,10 +54,10 @@ class UsageService:
         """
         ユーザーのサブスクリプション状態を取得
         
-        重要: 自動課金は一切発生しません。
-        体験期間終了後は、ユーザーが明示的にプランを選択するまで
-        statusが"expired"として扱われ、サービスが制限されます。
-        
+        重要: 自動課金は一切発生しません。無料プランはなく、登録後7日間の体験期間が
+        終わると、ユーザーが明示的にプランを選択するまでstatusが"expired"となり、
+        AI機能は使えません。
+
         Returns:
             {
                 "plan": "free" | "basic" | "premium",
@@ -30,6 +66,15 @@ class UsageService:
                 "is_trial": bool
             }
         """
+        # 常時利用できるアカウント(運営者など)は、体験期間・契約に関係なく有料プラン相当として扱う
+        if is_unlimited_account(email):
+            return {
+                "plan": "premium",
+                "status": "active",
+                "trial_ends_at": None,
+                "is_trial": False
+            }
+
         try:
             response = self.client.databases.query(
                 database_id=self.user_db_id,
@@ -60,35 +105,38 @@ class UsageService:
             # サブスクリプションステータスを取得（デフォルト: trial）
             status_select = props.get("Subscription Status", {}).get("select", {})
             status = status_select.get("name", "Trial").lower() if status_select else "trial"
-            
-            # 無料体験終了日を取得
-            trial_ends_at = None
-            trial_date = props.get("Trial Ends At", {}).get("date", {})
-            if trial_date and trial_date.get("start"):
-                try:
-                    trial_ends_at = datetime.fromisoformat(trial_date["start"].replace("Z", "+00:00"))
-                except:
-                    pass
-            
-            # Trial Ends At が未設定の場合は、登録日（CreatedAt）の7日後を体験終了日とする
-            if trial_ends_at is None:
-                created_date = props.get("CreatedAt", {}).get("date", {})
-                if created_date and created_date.get("start"):
-                    try:
-                        created_at = datetime.fromisoformat(created_date["start"].replace("Z", "+00:00"))
-                        trial_ends_at = created_at + timedelta(days=7)
-                    except:
-                        pass
 
-            # 無料体験中かどうかを判定
-            is_trial = status == "trial" or (plan == "free" and status != "expired")
-            
-            # 無料体験が期限切れかチェック
-            if is_trial and trial_ends_at:
-                if datetime.now() > trial_ends_at:
-                    is_trial = False
-                    status = "expired"
-            
+            # 有料プラン(Basic/Premium)で購読が有効な間だけ利用できる。解約・失効後は使えない
+            if plan in PAID_PLANS:
+                if status == "active":
+                    return {
+                        "plan": plan,
+                        "status": "active",
+                        "trial_ends_at": None,
+                        "is_trial": False
+                    }
+                return {
+                    "plan": plan,
+                    "status": "expired",
+                    "trial_ends_at": None,
+                    "is_trial": False
+                }
+
+            # 無料体験の終了日(登録時に保存)。未設定の既存ユーザーは登録日などから算出する
+            trial_date = (props.get("Trial Ends At") or {}).get("date") or {}
+            trial_ends_at = parse_notion_datetime(trial_date.get("start"))
+            if trial_ends_at is None:
+                created = parse_notion_datetime(((props.get("CreatedAt") or {}).get("date") or {}).get("start"))
+                base = max(created, TRIAL_ENFORCEMENT_START) if created else TRIAL_ENFORCEMENT_START
+                trial_ends_at = base + timedelta(days=TRIAL_DAYS)
+
+            # 体験期間内ならフル機能、過ぎたら使えない(無料プランはなし)
+            is_trial = status != "expired" and datetime.now(timezone.utc) <= trial_ends_at
+            if not is_trial:
+                status = "expired"
+            else:
+                status = "trial"
+
             return {
                 "plan": plan,
                 "status": status,
@@ -190,21 +238,16 @@ class UsageService:
                 "should_fallback_to_stt": bool
             }
         """
-        subscription = await self.get_user_subscription_status(email)
-        status = subscription.get("status", "trial")
-        plan = subscription.get("plan", "free")
-        
-        # 体験期間終了後、まだ有料プランに登録していない場合
-        if status == "expired" and plan == "free":
+        access = await self.check_access(email)
+        if not access["allowed"]:
             return {
                 "allowed": False,
-                "reason": "体験期間が終了しました。有料プランへのご登録をお願いいたします。自動課金は一切発生しません。",
+                "reason": access["reason"],
                 "remaining_minutes": 0.0,
                 "should_fallback_to_stt": False
             }
-        
-        # 無料体験中（7日間）はフル機能のため無制限。有料プランも無制限。
-        # 体験終了後（expired）は上の分岐でブロックされる（閲覧のみ）。
+
+        # 体験期間中・有料プランともに、音声認識の回数・時間の制限はなし
         return {
             "allowed": True,
             "reason": "",
@@ -212,6 +255,19 @@ class UsageService:
             "should_fallback_to_stt": False
         }
 
+    async def check_access(self, email: str) -> Dict:
+        """
+        AI機能(レッスン生成・AIコーチング・音声認識・読み上げ・解析)を使えるかを判定する。
+        体験期間(登録後7日間)中、または有料プランの購読が有効な間だけ使える。
+
+        Returns:
+            {"allowed": bool, "reason": str}
+        """
+        subscription = await self.get_user_subscription_status(email)
+        if subscription.get("status") == "expired":
+            return {"allowed": False, "reason": ACCESS_EXPIRED_MESSAGE}
+        return {"allowed": True, "reason": ""}
+    
     async def get_daily_lesson_count(self, email: str) -> int:
         """今日のレッスン使用数を取得"""
         try:
@@ -253,7 +309,7 @@ class UsageService:
     
     async def can_use_lesson(self, email: str) -> Dict:
         """
-        レッスン使用可能かチェック（無料体験7日間はフル機能・無制限、終了後は利用不可）
+        レッスン使用可能かチェック（体験期間中・有料プランは制限なし。体験終了後は使用不可）
         
         Returns:
             {
@@ -262,25 +318,14 @@ class UsageService:
                 "remaining_lessons": int
             }
         """
-        subscription = await self.get_user_subscription_status(email)
-        status = subscription.get("status", "trial")
-        plan = subscription.get("plan", "free")
-
-        # 体験期間終了後、まだ有料プランに登録していない場合は利用不可（閲覧のみ）
-        if status == "expired" and plan == "free":
-            return {
-                "allowed": False,
-                "reason": "体験期間が終了しました。有料プランへのご登録をお願いいたします。自動課金は一切発生しません。",
-                "remaining_lessons": 0
-            }
-
-        # 無料体験中（7日間）はフル機能のため無制限。有料プランも無制限。
+        access = await self.check_access(email)
+        # 体験期間中・有料プランともに、1日あたりのレッスン数の制限はなし
         return {
-            "allowed": True,
-            "reason": "",
+            "allowed": access["allowed"],
+            "reason": access["reason"],
             "remaining_lessons": None
         }
-
+    
     async def add_lesson_usage(self, email: str):
         """レッスン使用を記録"""
         try:
@@ -375,7 +420,7 @@ class UsageService:
     
     async def can_use_ai_chat(self, email: str) -> Dict:
         """
-        AIコーチング使用可能かチェック（無料体験7日間はフル機能・無制限、終了後は利用不可）
+        AIコーチング使用可能かチェック（体験期間中・有料プランは制限なし。体験終了後は使用不可）
         
         Returns:
             {
@@ -384,41 +429,14 @@ class UsageService:
                 "remaining_messages": int
             }
         """
-        subscription = await self.get_user_subscription_status(email)
-        status = subscription.get("status", "trial")
-        plan = subscription.get("plan", "free")
-
-        # 体験期間終了後、まだ有料プランに登録していない場合は利用不可（閲覧のみ）
-        if status == "expired" and plan == "free":
-            return {
-                "allowed": False,
-                "reason": "体験期間が終了しました。有料プランへのご登録をお願いいたします。自動課金は一切発生しません。",
-                "remaining_messages": 0
-            }
-        
-        # 有料プランは無制限（Premium）または月間制限（Basic）
-        if not subscription["is_trial"]:
-            plan = subscription.get("plan", "free")
-            if plan == "premium":
-                return {
-                    "allowed": True,
-                    "reason": "",
-                    "remaining_messages": None
-                }
-            # Basicプランは100メッセージ/月（実装は後で追加可能）
-            return {
-                "allowed": True,
-                "reason": "",
-                "remaining_messages": None
-            }
-        
-        # 無料体験中（7日間）はフル機能のため無制限
+        access = await self.check_access(email)
+        # 体験期間中はメッセージ数の制限なし。Basicの月100メッセージは、従来どおり未実装(Premiumと同じ扱い)
         return {
-            "allowed": True,
-            "reason": "",
+            "allowed": access["allowed"],
+            "reason": access["reason"],
             "remaining_messages": None
         }
-
+    
     async def add_ai_chat_usage(self, email: str):
         """AIコーチングメッセージ使用を記録"""
         try:

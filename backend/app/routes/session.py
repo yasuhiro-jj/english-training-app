@@ -25,7 +25,7 @@ async def generate_lessons(user: dict = Depends(get_current_user), level: int = 
     """
     毎日新聞のトップ記事から英語レッスンを生成
     生成したレッスンは自動的にNotionに保存されます
-    無料体験（7日間）はフル機能・無制限。体験終了後は利用不可（閲覧のみ）
+    無料体験プランでは1日1レッスンまで
     """
     import logging
     logger = logging.getLogger(__name__)
@@ -108,12 +108,16 @@ async def generate_lessons(user: dict = Depends(get_current_user), level: int = 
 
 
 @router.post("/session/start", response_model=SessionResponse)
-async def start_session(request: SessionCreate):
+async def start_session(request: SessionCreate, user: dict = Depends(get_current_user)):
     """
     新しいセッションを開始
     - URL指定の場合: 記事を取得して質問生成
     - コンテンツ指定の場合: そのままセッション開始
     """
+    access = await usage_service.check_access(user.get("email", ""))
+    if not access["allowed"]:
+        raise HTTPException(status_code=403, detail=access["reason"])
+
     try:
         question = ""
         summary = ""
@@ -193,6 +197,9 @@ async def submit_transcript(request: TranscriptSubmit, user: dict = Depends(get_
     - フィードバックを生成してNotionに保存
     """
     user_email = user.get("email")
+    access = await usage_service.check_access(user_email or "")
+    if not access["allowed"]:
+        raise HTTPException(status_code=403, detail=access["reason"])
     try:
         # セッション情報を取得
         session = sessions.get(request.session_id)

@@ -32,12 +32,9 @@ async def speak(request: TtsSpeakRequest, user: dict = Depends(get_current_user)
     if len(text) > 1500:
         raise HTTPException(status_code=400, detail="text is too long")
 
-    subscription = await usage_service.get_user_subscription_status(user_email)
-    if subscription.get("status") == "expired" and subscription.get("plan") == "free":
-        raise HTTPException(
-            status_code=403,
-            detail="体験期間が終了しました。有料プランへのご登録をお願いいたします。自動課金は一切発生しません。",
-        )
+    access = await usage_service.check_access(user_email)
+    if not access["allowed"]:
+        raise HTTPException(status_code=403, detail=access["reason"])
 
     try:
         default_instructions = (
