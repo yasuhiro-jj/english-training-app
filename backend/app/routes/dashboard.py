@@ -36,8 +36,9 @@ async def get_dashboard_stats(user: dict = Depends(get_current_user)):
             usage_info = {
                 "daily_lessons": daily_lessons,
                 "daily_ai_messages": daily_ai_messages,
-                "remaining_lessons": max(0, 1 - daily_lessons),
-                "remaining_ai_messages": max(0, 10 - daily_ai_messages)
+                # 無料体験中（7日間）はフル機能・無制限のため、残り回数は None（無制限）
+                "remaining_lessons": None,
+                "remaining_ai_messages": None
             }
         
         return {

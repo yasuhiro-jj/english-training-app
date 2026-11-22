@@ -25,7 +25,7 @@ async def generate_lessons(user: dict = Depends(get_current_user), level: int = 
     """
     毎日新聞のトップ記事から英語レッスンを生成
     生成したレッスンは自動的にNotionに保存されます
-    無料体験プランでは1日1レッスンまで
+    無料体験（7日間）はフル機能・無制限。体験終了後は利用不可（閲覧のみ）
     """
     import logging
     logger = logging.getLogger(__name__)

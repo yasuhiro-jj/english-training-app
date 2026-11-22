@@ -163,12 +163,9 @@ export default function LandingPage() {
               ✓ クレジットカード登録不要 ✓ 7日間フル機能をお試し ✓ 体験終了後も自動課金なし
             </p>
             <div className="mt-4 p-4 bg-indigo-50 border border-indigo-200 rounded-lg max-w-2xl mx-auto">
-              <p className="text-xs font-semibold text-indigo-900 mb-2">無料体験プランの1日の制限</p>
-              <div className="text-xs text-indigo-700 space-y-1">
-                <p>• レッスン: 1日1レッスンまで</p>
-                <p>• AIコーチング: 1日10メッセージまで</p>
-                <p>• Whisper音声認識: 20分/月まで</p>
-              </div>
+              <p className="text-xs text-indigo-700">
+                無料体験は7日間、すべての機能を制限なしでお試しいただけます。体験期間終了後は閲覧のみとなります。
+              </p>
             </div>
           </FadeInUp>
         </div>
@@ -572,11 +569,11 @@ export default function LandingPage() {
                 <ul className="space-y-4 mb-8">
                   <li className="flex items-start">
                     <CheckCircle2 className="w-5 h-5 text-green-500 mr-3 mt-0.5 flex-shrink-0" />
-                    <span className="text-gray-700">1日1レッスン</span>
+                    <span className="text-gray-700">レッスン無制限</span>
                   </li>
                   <li className="flex items-start">
                     <CheckCircle2 className="w-5 h-5 text-green-500 mr-3 mt-0.5 flex-shrink-0" />
-                    <span className="text-gray-700">基本的なAIフィードバック</span>
+                    <span className="text-gray-700">詳細なAIフィードバック</span>
                   </li>
                   <li className="flex items-start">
                     <CheckCircle2 className="w-5 h-5 text-green-500 mr-3 mt-0.5 flex-shrink-0" />
@@ -587,14 +584,6 @@ export default function LandingPage() {
                     <span className="text-gray-700">音声認識による会話練習</span>
                   </li>
                 </ul>
-                <div className="mt-4 p-4 bg-indigo-50 border border-indigo-200 rounded-lg">
-                  <p className="text-xs font-semibold text-indigo-900 mb-2">無料体験プランの1日の制限</p>
-                  <div className="text-xs text-indigo-700 space-y-1">
-                    <p>• レッスン: 1日1レッスンまで</p>
-                    <p>• AIコーチング: 1日10メッセージまで</p>
-                    <p>• Whisper音声認識: 20分/月まで</p>
-                  </div>
-                </div>
                 <Link href={user ? "/dashboard" : "/signup"}>
                   <button className="w-full px-6 py-3 bg-green-500 hover:bg-green-600 text-white font-bold rounded-full transition-colors">
                     無料で始める
@@ -756,17 +745,6 @@ export default function LandingPage() {
             </div>
           </FadeInUp>
 
-          {/* Free Trial Daily Limits Info */}
-          <FadeInUp delay={1.2}>
-            <div className="mt-6 p-4 bg-indigo-50 border border-indigo-200 rounded-lg max-w-2xl mx-auto">
-              <p className="text-xs font-semibold text-indigo-900 mb-2">無料体験プランの1日の制限</p>
-              <div className="text-xs text-indigo-700 space-y-1">
-                <p>• レッスン: 1日1レッスンまで</p>
-                <p>• AIコーチング: 1日10メッセージまで</p>
-                <p>• Whisper音声認識: 20分/月まで</p>
-              </div>
-            </div>
-          </FadeInUp>
         </div>
       </section>
 

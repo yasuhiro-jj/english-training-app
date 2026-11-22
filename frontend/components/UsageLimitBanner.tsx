@@ -8,8 +8,8 @@ import { api } from '../lib/api';
 interface UsageInfo {
     daily_lessons: number;
     daily_ai_messages: number;
-    remaining_lessons: number;
-    remaining_ai_messages: number;
+    remaining_lessons: number | null;
+    remaining_ai_messages: number | null;
 }
 
 export default function UsageLimitBanner() {
@@ -39,7 +39,7 @@ export default function UsageLimitBanner() {
 
     // 警告を表示する条件: 残りが少ない場合（レッスン: 残り0、AIコーチング: 残り3以下）
     const shouldShowLessonWarning = usageInfo.remaining_lessons === 0;
-    const shouldShowAIChatWarning = usageInfo.remaining_ai_messages <= 3 && usageInfo.remaining_ai_messages > 0;
+    const shouldShowAIChatWarning = usageInfo.remaining_ai_messages !== null && usageInfo.remaining_ai_messages <= 3 && usageInfo.remaining_ai_messages > 0;
     const shouldShowAIChatLimit = usageInfo.remaining_ai_messages === 0;
 
     if (!shouldShowLessonWarning && !shouldShowAIChatWarning && !shouldShowAIChatLimit) {
@@ -58,7 +58,7 @@ export default function UsageLimitBanner() {
                                     本日のレッスン制限に達しました
                                 </p>
                                 <p className="text-sm text-yellow-700 mt-1">
-                                    無料体験では1日1レッスンまでです。明日またお試しください。
+                                    本日のレッスン回数の上限に達しました。
                                 </p>
                                 <Link
                                     href="/plans"
@@ -80,7 +80,7 @@ export default function UsageLimitBanner() {
                                     本日のAIコーチング制限に達しました
                                 </p>
                                 <p className="text-sm text-red-700 mt-1">
-                                    無料体験では1日10メッセージまでです。明日またお試しください。
+                                    本日のAIコーチング回数の上限に達しました。
                                 </p>
                                 <Link
                                     href="/plans"
@@ -102,7 +102,7 @@ export default function UsageLimitBanner() {
                                     AIコーチングの残りメッセージが少なくなっています
                                 </p>
                                 <p className="text-sm text-orange-700 mt-1">
-                                    残り {usageInfo.remaining_ai_messages} メッセージ（無料体験: 1日10メッセージまで）
+                                    残り {usageInfo.remaining_ai_messages} メッセージ
                                 </p>
                                 <Link
                                     href="/plans"

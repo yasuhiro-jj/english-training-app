@@ -86,6 +86,15 @@ class AuthService:
                     },
                     "CreatedAt": {
                         "date": {"start": datetime.now().isoformat()}
+                    },
+                    "Subscription Plan": {
+                        "select": {"name": "Free"}
+                    },
+                    "Subscription Status": {
+                        "select": {"name": "Trial"}
+                    },
+                    "Trial Ends At": {
+                        "date": {"start": (datetime.now() + timedelta(days=7)).isoformat()}
                     }
                 }
             )

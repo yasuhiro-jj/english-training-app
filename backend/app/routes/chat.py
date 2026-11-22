@@ -17,7 +17,7 @@ class ChatRequest(BaseModel):
 async def chat(request: ChatRequest, user: dict = Depends(get_current_user)):
     """
     AIとの自由対話エンドポイント
-    無料体験プランでは1日10メッセージまで
+    無料体験（7日間）はフル機能・無制限。体験終了後は利用不可（閲覧のみ）
     """
     user_email = user.get("email") if user else None
     if not user_email:

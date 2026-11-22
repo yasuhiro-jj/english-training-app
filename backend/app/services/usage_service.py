@@ -70,6 +70,16 @@ class UsageService:
                 except:
                     pass
             
+            # Trial Ends At が未設定の場合は、登録日（CreatedAt）の7日後を体験終了日とする
+            if trial_ends_at is None:
+                created_date = props.get("CreatedAt", {}).get("date", {})
+                if created_date and created_date.get("start"):
+                    try:
+                        created_at = datetime.fromisoformat(created_date["start"].replace("Z", "+00:00"))
+                        trial_ends_at = created_at + timedelta(days=7)
+                    except:
+                        pass
+
             # 無料体験中かどうかを判定
             is_trial = status == "trial" or (plan == "free" and status != "expired")
             
@@ -193,43 +203,15 @@ class UsageService:
                 "should_fallback_to_stt": False
             }
         
-        if subscription["is_trial"]:
-            # 無料体験: 20分制限
-            current_usage = await self.get_whisper_usage_this_month(email)
-            remaining = 20.0 - current_usage
-            
-            if remaining <= 0:
-                return {
-                    "allowed": False,
-                    "reason": "無料体験のWhisper使用上限（20分）に達しました",
-                    "remaining_minutes": 0.0,
-                    "should_fallback_to_stt": True
-                }
-            
-            if requested_minutes > remaining:
-                return {
-                    "allowed": False,
-                    "reason": f"Whisper残り{remaining:.1f}分です。端末STTをご利用ください",
-                    "remaining_minutes": remaining,
-                    "should_fallback_to_stt": True
-                }
-            
-            return {
-                "allowed": True,
-                "reason": "",
-                "remaining_minutes": remaining - requested_minutes,
-                "should_fallback_to_stt": False
-            }
-        else:
-            # 有料プラン（basic/premium）: 無制限
-            # 注意: 有料プランはユーザーが明示的に選択した場合のみ有効になります
-            return {
-                "allowed": True,
-                "reason": "",
-                "remaining_minutes": None,
-                "should_fallback_to_stt": False
-            }
-    
+        # 無料体験中（7日間）はフル機能のため無制限。有料プランも無制限。
+        # 体験終了後（expired）は上の分岐でブロックされる（閲覧のみ）。
+        return {
+            "allowed": True,
+            "reason": "",
+            "remaining_minutes": None,
+            "should_fallback_to_stt": False
+        }
+
     async def get_daily_lesson_count(self, email: str) -> int:
         """今日のレッスン使用数を取得"""
         try:
@@ -271,7 +253,7 @@ class UsageService:
     
     async def can_use_lesson(self, email: str) -> Dict:
         """
-        レッスン使用可能かチェック（無料体験: 1日1レッスン）
+        レッスン使用可能かチェック（無料体験7日間はフル機能・無制限、終了後は利用不可）
         
         Returns:
             {
@@ -281,31 +263,24 @@ class UsageService:
             }
         """
         subscription = await self.get_user_subscription_status(email)
-        
-        # 有料プランは無制限
-        if not subscription["is_trial"]:
-            return {
-                "allowed": True,
-                "reason": "",
-                "remaining_lessons": None
-            }
-        
-        # 無料体験: 1日1レッスン
-        daily_count = await self.get_daily_lesson_count(email)
-        
-        if daily_count >= 1:
+        status = subscription.get("status", "trial")
+        plan = subscription.get("plan", "free")
+
+        # 体験期間終了後、まだ有料プランに登録していない場合は利用不可（閲覧のみ）
+        if status == "expired" and plan == "free":
             return {
                 "allowed": False,
-                "reason": "無料体験では1日1レッスンまでです。明日またお試しください。",
+                "reason": "体験期間が終了しました。有料プランへのご登録をお願いいたします。自動課金は一切発生しません。",
                 "remaining_lessons": 0
             }
-        
+
+        # 無料体験中（7日間）はフル機能のため無制限。有料プランも無制限。
         return {
             "allowed": True,
             "reason": "",
-            "remaining_lessons": 1 - daily_count
+            "remaining_lessons": None
         }
-    
+
     async def add_lesson_usage(self, email: str):
         """レッスン使用を記録"""
         try:
@@ -400,7 +375,7 @@ class UsageService:
     
     async def can_use_ai_chat(self, email: str) -> Dict:
         """
-        AIコーチング使用可能かチェック（無料体験: 10メッセージ/日）
+        AIコーチング使用可能かチェック（無料体験7日間はフル機能・無制限、終了後は利用不可）
         
         Returns:
             {
@@ -410,6 +385,16 @@ class UsageService:
             }
         """
         subscription = await self.get_user_subscription_status(email)
+        status = subscription.get("status", "trial")
+        plan = subscription.get("plan", "free")
+
+        # 体験期間終了後、まだ有料プランに登録していない場合は利用不可（閲覧のみ）
+        if status == "expired" and plan == "free":
+            return {
+                "allowed": False,
+                "reason": "体験期間が終了しました。有料プランへのご登録をお願いいたします。自動課金は一切発生しません。",
+                "remaining_messages": 0
+            }
         
         # 有料プランは無制限（Premium）または月間制限（Basic）
         if not subscription["is_trial"]:
@@ -427,23 +412,13 @@ class UsageService:
                 "remaining_messages": None
             }
         
-        # 無料体験: 10メッセージ/日
-        daily_count = await self.get_daily_ai_messages_count(email)
-        
-        if daily_count >= 10:
-            return {
-                "allowed": False,
-                "reason": "無料体験では1日10メッセージまでです。明日またお試しください。",
-                "remaining_messages": 0
-            }
-        
-        remaining = 10 - daily_count
+        # 無料体験中（7日間）はフル機能のため無制限
         return {
             "allowed": True,
             "reason": "",
-            "remaining_messages": remaining
+            "remaining_messages": None
         }
-    
+
     async def add_ai_chat_usage(self, email: str):
         """AIコーチングメッセージ使用を記録"""
         try:
