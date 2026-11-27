@@ -1,11 +1,13 @@
 import asyncio
+import os
 from fastapi import APIRouter, HTTPException, Depends
 from app.models.schemas import SessionCreate, SessionResponse, TranscriptSubmit, AnalysisResponse, LessonGenerateResponse
 from app.services import AIService, ArticleService, NotionService, NewsService
 from app.services.usage_service import UsageService
 from app.deps import get_current_user
-import uuid
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
+
+import jwt
 
 router = APIRouter(prefix="/api", tags=["session"])
 
@@ -16,8 +18,37 @@ notion_service = NotionService()
 news_service = NewsService()
 usage_service = UsageService()
 
-# セッション管理用の簡易ストレージ（本番環境ではRedisなどを使用）
-sessions = {}
+# セッション管理: サーバー側に状態を持たず、セッション内容を署名付きJWTとして
+# クライアントに持たせる（ステートレス/サーバーレス環境向け）。
+# session_id にはこのトークンをそのまま使う。有効期限は2時間。
+SESSION_TOKEN_TTL = timedelta(hours=2)
+_SESSION_ALGORITHM = "HS256"
+
+
+def _get_session_secret() -> str:
+    secret = os.getenv("JWT_SECRET_KEY")
+    if not secret:
+        raise RuntimeError("JWT_SECRET_KEY is not set. Cannot sign session tokens.")
+    return secret
+
+
+def _create_session_token(session_data: dict) -> str:
+    payload = dict(session_data)
+    payload["token_type"] = "session"
+    payload["exp"] = datetime.now(timezone.utc) + SESSION_TOKEN_TTL
+    return jwt.encode(payload, _get_session_secret(), algorithm=_SESSION_ALGORITHM)
+
+
+def _decode_session_token(token: str) -> dict | None:
+    try:
+        payload = jwt.decode(token, _get_session_secret(), algorithms=[_SESSION_ALGORITHM])
+    except jwt.PyJWTError:
+        return None
+    except (TypeError, ValueError, AttributeError):
+        return None
+    if not isinstance(payload, dict) or payload.get("token_type") != "session":
+        return None
+    return payload
 
 
 @router.get("/session/generate", response_model=LessonGenerateResponse)
@@ -150,9 +181,6 @@ async def start_session(request: SessionCreate, user: dict = Depends(get_current
         else:
              raise HTTPException(status_code=400, detail="URLまたはコンテンツが必要です")
         
-        # セッションIDを生成
-        session_id = str(uuid.uuid4())
-        
         # レッスン情報を抽出（custom_lesson_dataがある場合）
         lesson_data = None
         if request.custom_lesson_data:
@@ -164,8 +192,8 @@ async def start_session(request: SessionCreate, user: dict = Depends(get_current
                 "japanese_title": request.custom_lesson_data.get("japanese_title", "")
             }
         
-        # セッション情報を保存
-        sessions[session_id] = {
+        # セッション情報を署名付きトークン化（session_id として返す）
+        session_id = _create_session_token({
             "article_url": request.article_url or "generated",
             "article_title": article_title,
             "article_content": article_content,
@@ -173,7 +201,7 @@ async def start_session(request: SessionCreate, user: dict = Depends(get_current
             "topic": request.topic or article_title,
             "created_at": datetime.now().isoformat(),
             "lesson_data": lesson_data  # レッスン情報を追加
-        }
+        })
         
         return SessionResponse(
             session_id=session_id,
@@ -202,7 +230,7 @@ async def submit_transcript(request: TranscriptSubmit, user: dict = Depends(get_
         raise HTTPException(status_code=403, detail=access["reason"])
     try:
         # セッション情報を取得
-        session = sessions.get(request.session_id)
+        session = _decode_session_token(request.session_id)
         if not session:
             raise HTTPException(status_code=404, detail="セッションが見つかりません")
         
