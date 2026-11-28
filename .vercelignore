@@ -1,0 +1,5 @@
+# This Vercel project (repository root) is backend-only.
+# Keep the Next.js frontend and unrelated snapshots out of the deployment
+# so the Python backend is detected and built on its own.
+frontend
+OneDrive
